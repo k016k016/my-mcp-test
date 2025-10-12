@@ -21,11 +21,16 @@ vi.mock('next/navigation', () => ({
   useParams: () => ({}),
 }))
 
-// Server Actionsのモック
-vi.mock('@/app/actions/members', () => ({
-  updateMemberRole: vi.fn(),
-  removeMember: vi.fn(),
-}))
+// Server Actionsのモック（コンポーネントテスト用）
+// Note: Server Actions自体のテストではこのモックは使用しません
+vi.mock('@/app/actions/members', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/app/actions/members')>()
+  return {
+    ...actual,
+    updateMemberRole: vi.fn(),
+    removeMember: vi.fn(),
+  }
+})
 
 // 各テスト後にクリーンアップ
 afterEach(() => {
