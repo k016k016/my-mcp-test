@@ -1,4 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+// vitest.setup.tsのモックを解除して実際の関数を使用
+vi.unmock('@/app/actions/members')
+
 import { inviteMember, acceptInvitation, updateMemberRole, removeMember } from '../members'
 
 // Supabaseクライアントのモック
@@ -283,7 +287,7 @@ describe('Members Actions', () => {
     })
   })
 
-  describe.skip('updateMemberRole', () => {
+  describe('updateMemberRole', () => {
     it('認証されていない場合、エラーを返す', async () => {
       mockSupabase.auth.getUser.mockResolvedValue({
         data: { user: null },
@@ -432,7 +436,7 @@ describe('Members Actions', () => {
     })
   })
 
-  describe.skip('removeMember', () => {
+  describe('removeMember', () => {
     it('認証されていない場合、エラーを返す', async () => {
       mockSupabase.auth.getUser.mockResolvedValue({
         data: { user: null },
