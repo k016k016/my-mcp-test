@@ -4,24 +4,54 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
+    "dev:staging": "env-cmd -f .env.staging next dev --turbopack",
     "build": "next build --turbopack",
+    "build:staging": "env-cmd -f .env.staging next build --turbopack",
+    "build:production": "env-cmd -f .env.production next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "env:dev": "cp .env.development .env.local && echo '✅ 開発環境に切り替えました'",
+    "env:staging": "cp .env.staging .env.local && echo '✅ ステージング環境に切り替えました'",
+    "env:production": "cp .env.production .env.local && echo '✅ 本番環境に切り替えました (注意して使用してください)'"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.908.0",
+    "@aws-sdk/s3-request-presigner": "^3.908.0",
+    "@sentry/nextjs": "^10.19.0",
+    "@supabase/ssr": "^0.7.0",
+    "@supabase/supabase-js": "^2.75.0",
+    "@upstash/redis": "^1.35.5",
+    "chargebee-typescript": "^2.53.0",
+    "next": "15.5.4",
+    "posthog-js": "^1.275.1",
+    "posthog-node": "^5.9.5",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "next": "15.5.4"
+    "resend": "^6.1.2"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.56.0",
+    "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4",
+    "@vitejs/plugin-react": "^5.0.4",
+    "env-cmd": "^11.0.0",
     "eslint": "^9",
     "eslint-config-next": "15.5.4",
-    "@eslint/eslintrc": "^3"
+    "jsdom": "^27.0.0",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "vitest": "^3.2.4"
   }
 }

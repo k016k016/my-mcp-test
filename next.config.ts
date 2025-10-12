@@ -1,7 +1,25 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   /* config options here */
+
+  // Instrumentation APIを有効化（Sentry用）
+  experimental: {
+    instrumentationHook: true,
+  },
 };
 
-export default nextConfig;
+// Sentryの設定でNext.js設定をラップ
+export default withSentryConfig(nextConfig, {
+  // Sentryのビルド時設定
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+
+  // Sentryプラグインのオプション
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+  hideSourceMaps: true,
+  disableLogger: true,
+  automaticVercelMonitors: true,
+});
