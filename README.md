@@ -9,7 +9,7 @@ Next.js 15 + TypeScript + Supabaseで構築された、本番環境で使用で�
 - **組織・メンバー管理**: 招待、ロール管理（Owner/Admin/Member）、権限制御
 - **サブスクリプション**: プラン管理、使用量追跡、Chargebee統合準備済み
 - **マルチドメイン**: 4つのドメイン（マーケティング/アプリ/管理/運用）
-- **7つの外部サービス統合**: Supabase、Cloudflare R2、Upstash Redis、Sentry、PostHog、Chargebee、Resend
+- **7つの外部サービス統合**: Supabase、Cloudflare R2、Upstash Redis、Sentry、Logflare、Chargebee、Resend
 - **監査ログ**: 全アクションの記録とトレーサビリティ
 - **本番環境対応**: セキュリティ、スケーラビリティ、エラー監視
 
@@ -28,7 +28,7 @@ Next.js 15 + TypeScript + Supabaseで構築された、本番環境で使用で�
 
 ### 監視・分析
 - **Sentry** - エラー監視
-- **PostHog** - プロダクト分析、フィーチャーフラグ
+- **Logflare** - ログ管理・監査ログ
 
 ### 決済・通知
 - **Chargebee** - サブスクリプション決済
@@ -80,7 +80,7 @@ npm install
 
 推奨サービス：
 - Sentry（エラー監視）
-- PostHog（分析）
+- Logflare（ログ管理・監査ログ）
 - Chargebee（決済、オプション）
 
 ### 3. 環境変数の設定

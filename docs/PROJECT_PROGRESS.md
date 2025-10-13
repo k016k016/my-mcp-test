@@ -28,8 +28,6 @@
   - 全Redis操作関数
 - ✅ **Sentry** - エラー監視
   - クライアント/サーバー/Edge設定
-- ✅ **PostHog** - プロダクト分析
-  - イベント追跡、フィーチャーフラグ
 - ✅ **Chargebee** - サブスクリプション決済
   - 顧客管理、サブスクリプション管理
 - ✅ **Resend** - メール送信
@@ -286,7 +284,6 @@ my-mcp-test/
 │   │   ├── auth/                  # 認証関連
 │   │   ├── chargebee/             # Chargebee
 │   │   ├── domains/               # ドメイン管理
-│   │   ├── posthog/               # PostHog
 │   │   ├── r2/                    # Cloudflare R2
 │   │   ├── redis/                 # Upstash Redis
 │   │   ├── resend/                # Resend
@@ -398,7 +395,7 @@ http://ops.localhost:3000      # OPS
 2. **環境変数の設定**
    - `.env.local` の値を本番環境用に更新
 3. **外部サービスの設定**
-   - Supabase、R2、Redis、Sentry、PostHog、Chargebee、Resendの設定
+   - Supabase、R2、Redis、Sentry、Chargebee、Resendの設定
 4. **ドメインの設定**
    - 4つのドメインをデプロイ先に向ける
 5. **OPS用IP制限の設定**

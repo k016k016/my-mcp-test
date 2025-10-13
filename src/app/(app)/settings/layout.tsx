@@ -1,8 +1,11 @@
 // 設定ページ用レイアウト
+'use client'
+
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
   return (
     <div className="max-w-7xl mx-auto">
       <div className="flex gap-8">
@@ -14,7 +17,9 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
               <li>
                 <Link
                   href="/settings/organization"
-                  className="block px-3 py-2 text-sm rounded-md hover:bg-gray-100 text-gray-700"
+                  className={`block px-3 py-2 text-sm rounded-md hover:bg-gray-100 ${
+                    pathname === '/settings/organization' ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-700'
+                  }`}
                 >
                   組織設定
                 </Link>
@@ -22,7 +27,9 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
               <li>
                 <Link
                   href="/settings/members"
-                  className="block px-3 py-2 text-sm rounded-md hover:bg-gray-100 text-gray-700"
+                  className={`block px-3 py-2 text-sm rounded-md hover:bg-gray-100 ${
+                    pathname === '/settings/members' ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-700'
+                  }`}
                 >
                   メンバー管理
                 </Link>
@@ -30,7 +37,9 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
               <li>
                 <Link
                   href="/settings/subscription"
-                  className="block px-3 py-2 text-sm rounded-md hover:bg-gray-100 text-gray-700"
+                  className={`block px-3 py-2 text-sm rounded-md hover:bg-gray-100 ${
+                    pathname === '/settings/subscription' ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-700'
+                  }`}
                 >
                   サブスクリプション
                 </Link>
@@ -38,7 +47,9 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
               <li>
                 <Link
                   href="/settings/profile"
-                  className="block px-3 py-2 text-sm rounded-md hover:bg-gray-100 text-gray-700"
+                  className={`block px-3 py-2 text-sm rounded-md hover:bg-gray-100 ${
+                    pathname === '/settings/profile' ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-700'
+                  }`}
                 >
                   プロフィール
                 </Link>
@@ -46,7 +57,9 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
               <li>
                 <Link
                   href="/settings/notifications"
-                  className="block px-3 py-2 text-sm rounded-md hover:bg-gray-100 text-gray-700"
+                  className={`block px-3 py-2 text-sm rounded-md hover:bg-gray-100 ${
+                    pathname === '/settings/notifications' ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-700'
+                  }`}
                 >
                   通知設定
                 </Link>

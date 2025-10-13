@@ -37,3 +37,18 @@ export function getRedisClient(): Redis {
 export function resetRedisClient(): void {
   redisClient = null
 }
+
+/**
+ * Redisクライアントのインスタンス（オプショナル）
+ * Redisが設定されていない場合はnullを返す
+ */
+export function getOptionalRedisClient(): Redis | null {
+  try {
+    return getRedisClient()
+  } catch {
+    return null
+  }
+}
+
+// デフォルトエクスポート（後方互換性のため）
+export const redis = getOptionalRedisClient()

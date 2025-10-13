@@ -12,7 +12,6 @@
 | **Upstash Redis** | ⚠️ 推奨 | データベースのみ分離 | 各環境で無料枠利用可 |
 | **Resend** | ⚠️ 推奨 | APIキーのみ分離 | 1アカウントでOK |
 | **Sentry** | ❌ 任意 | プロジェクトのみ分離 | 1アカウントでOK |
-| **PostHog** | ❌ 任意 | プロジェクトのみ分離 | 1アカウントでOK |
 | **Chargebee** | ✅ 必須 | テスト/本番モード分離 | テストサイトは無料 |
 
 ---
@@ -260,37 +259,7 @@ Vercelダッシュボードで：
 
 ---
 
-## 6. PostHog - **プロジェクトのみ分離**
-
-### 推奨構成
-```
-1つのPostHogアカウント
-  └─ Development（プロジェクト）
-  └─ Staging（プロジェクト）
-  └─ Production（プロジェクト）
-```
-
-### 理由
-- **プロジェクトで完全に分離される**
-- 分析データが環境ごとに管理される
-- 1つのアカウントで複数プロジェクト管理
-
-### アカウント数
-**1つのPostHogアカウント**のみ
-
-### 手順
-1. PostHogアカウント作成（1回のみ）
-2. プロジェクトを3つ作成
-3. 各プロジェクトのAPI Keyを取得
-
-### コスト
-- **無料枠**: 月100万イベント
-- 3つのプロジェクトで共有
-- 開発環境のイベント数を考慮
-
----
-
-## 7. Chargebee - **テスト/本番サイト分離が必須**
+## 6. Chargebee - **テスト/本番サイト分離が必須**
 
 ### 推奨構成
 ```
@@ -332,7 +301,6 @@ Vercelダッシュボードで：
 | Upstash | DB1つ作成（dev） |
 | Resend | APIキー1つ作成 |
 | Sentry | スキップ（開発では不要） |
-| PostHog | プロジェクト1つ作成（オプション） |
 | Chargebee | スキップ（決済機能を使わない限り不要） |
 
 **必要なアカウント数: 4つ**（Supabase、Cloudflare、Upstash、Resend）
@@ -349,10 +317,9 @@ Vercelダッシュボードで：
 | Upstash | 1アカウント | 3データベース |
 | Resend | 1アカウント | 3APIキー |
 | Sentry | 1アカウント | 3プロジェクト |
-| PostHog | 1アカウント | 3プロジェクト |
 | Chargebee | 1アカウント | 2サイト |
 
-**必要なアカウント数: 8つ**（サービスごとに1つ）
+**必要なアカウント数: 7つ**（サービスごとに1つ）
 
 ---
 
@@ -380,7 +347,6 @@ npm run env:dev
 3. Upstash（新DB: staging）
 4. Resend（新APIキー: staging）
 5. Sentry（新プロジェクト: staging）
-6. PostHog（新プロジェクト: staging）
 
 # .env.staging に設定
 ```
@@ -394,8 +360,7 @@ npm run env:dev
 3. Upstash（新DB: production）
 4. Resend（新APIキー + ドメイン認証）
 5. Sentry（新プロジェクト: production）
-6. PostHog（新プロジェクト: production）
-7. Chargebee（本番サイト作成）
+6. Chargebee（本番サイト作成）
 
 # .env.production に設定
 ```

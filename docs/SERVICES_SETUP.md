@@ -1,13 +1,12 @@
 # 外部サービス統合ガイド
 
-このガイドでは、Sentry、PostHog、Chargebee、Resendの4つのサービスの設定方法と使用方法を説明します。
+このガイドでは、Sentry、Chargebee、Resendの3つのサービスの設定方法と使用方法を説明します。
 
 ## 📑 目次
 
 1. [Sentry - エラー監視](#sentry---エラー監視)
-2. [PostHog - プロダクト分析](#posthog---プロダクト分析)
-3. [Chargebee - サブスクリプション決済](#chargebee---サブスクリプション決済)
-4. [Resend - メール送信](#resend---メール送信)
+2. [Chargebee - サブスクリプション決済](#chargebee---サブスクリプション決済)
+3. [Resend - メール送信](#resend---メール送信)
 
 ---
 
@@ -78,114 +77,6 @@ Sentry.setTag('feature_flag', 'new_design')
 
 - **無料プラン**: 5,000エラー/月
 - **有料プラン**: $26/月〜（50,000エラー/月）
-
----
-
-## PostHog - プロダクト分析
-
-PostHogは、オープンソースのプロダクト分析プラットフォームです。
-
-### セットアップ手順
-
-1. **PostHogアカウントを作成**
-   - [https://app.posthog.com](https://app.posthog.com)でアカウントを作成
-
-2. **プロジェクトAPIキーを取得**
-   - プロジェクト設定から「Project API Key」を取得
-
-3. **環境変数を設定**
-   ```bash
-   NEXT_PUBLIC_POSTHOG_KEY=your-posthog-key
-   NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
-   ```
-
-4. **Root LayoutにPostHogProviderを追加**
-
-\`\`\`typescript
-// src/app/layout.tsx
-import { PostHogProvider, PostHogPageView } from '@/lib/posthog'
-import { Suspense } from 'react'
-
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="ja">
-      <body>
-        <PostHogProvider>
-          <Suspense>
-            <PostHogPageView />
-          </Suspense>
-          {children}
-        </PostHogProvider>
-      </body>
-    </html>
-  )
-}
-\`\`\`
-
-### 使用方法
-
-#### イベントを追跡
-
-\`\`\`typescript
-'use client'
-import { usePostHog } from 'posthog-js/react'
-
-export function MyComponent() {
-  const posthog = usePostHog()
-
-  const handleClick = () => {
-    posthog.capture('button_clicked', {
-      button_name: 'signup',
-      page: 'landing',
-    })
-  }
-
-  return <button onClick={handleClick}>サインアップ</button>
-}
-\`\`\`
-
-#### ユーザーを識別
-
-\`\`\`typescript
-posthog.identify('user123', {
-  email: 'user@example.com',
-  name: '山田太郎',
-  plan: 'pro',
-})
-\`\`\`
-
-#### フィーチャーフラグを使用
-
-\`\`\`typescript
-const showNewFeature = posthog.isFeatureEnabled('new-feature')
-
-if (showNewFeature) {
-  // 新機能を表示
-}
-\`\`\`
-
-#### サーバーサイドで使用
-
-\`\`\`typescript
-import { getPostHogClient } from '@/lib/posthog'
-
-export async function trackServerEvent() {
-  const posthog = getPostHogClient()
-
-  posthog.capture({
-    distinctId: 'user123',
-    event: 'server_event',
-    properties: {
-      plan: 'pro',
-    },
-  })
-}
-\`\`\`
-
-### 料金
-
-- **無料プラン**: 100万イベント/月
-- **有料プラン**: $0.00031/イベント（100万イベント以降）
 
 ---
 
@@ -378,14 +269,12 @@ await sendTemplateEmail({
 | サービス | 用途 | 料金（無料枠） |
 |---------|------|----------------|
 | **Sentry** | エラー監視 | 5,000エラー/月 |
-| **PostHog** | プロダクト分析 | 100万イベント/月 |
 | **Chargebee** | サブスクリプション決済 | $100K収益まで |
 | **Resend** | メール送信 | 3,000メール/月 |
 
 これらのサービスを組み合わせることで、プロダクション環境に必要な機能を網羅できます：
 
 - エラーの検知と修正（Sentry）
-- ユーザー行動の分析（PostHog）
 - サブスクリプション管理（Chargebee）
 - トランザクショナルメール（Resend）
 

@@ -143,7 +143,6 @@ main (本番)
 - [ ] Cloudflare R2本番用バケットを作成
 - [ ] Upstash Redis本番用インスタンスを作成
 - [ ] Sentry本番プロジェクトを作成
-- [ ] PostHog本番プロジェクトを作成
 - [ ] Chargebeeを本番モードに設定
 - [ ] Resend本番用APIキーを取得
 - [ ] `.env.production` に認証情報を設定

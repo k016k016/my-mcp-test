@@ -1,6 +1,8 @@
 // APPドメインのトップページ
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { env } from '@/lib/env'
+import { getCurrentOrganizationId, setCurrentOrganizationId } from '@/lib/organization/current'
 
 export default async function AppPage() {
   const supabase = await createClient()
@@ -12,8 +14,7 @@ export default async function AppPage() {
 
   if (!user) {
     // 未認証の場合はWWWドメインのログインページへ
-    const wwwUrl = process.env.NEXT_PUBLIC_WWW_URL || 'http://localhost:3000'
-    redirect(`${wwwUrl}/login`)
+    redirect(`${env.NEXT_PUBLIC_WWW_URL}/login`)
   }
 
   // ユーザーが所属する組織を取得
@@ -25,7 +26,10 @@ export default async function AppPage() {
       organization:organizations (
         id,
         name,
-        slug
+        slug,
+        subscription_plan,
+        subscription_status,
+        trial_ends_at
       )
     `
     )
@@ -36,9 +40,25 @@ export default async function AppPage() {
     redirect('/onboarding/create-organization')
   }
 
-  // TODO: 複数の組織がある場合は最後に選択した組織を表示
-  // 現在は最初の組織を使用
-  const currentOrg = memberships[0].organization as any
+  // Cookieから最後に選択した組織を取得
+  const currentOrgId = await getCurrentOrganizationId()
+
+  // 最後に選択した組織を探す
+  let currentMembership = currentOrgId
+    ? memberships.find((m) => m.organization && 'id' in m.organization && m.organization.id === currentOrgId)
+    : null
+
+  // 見つからない場合は最初の組織を使用
+  if (!currentMembership) {
+    currentMembership = memberships[0]
+
+    // Cookieに保存
+    if (currentMembership.organization && 'id' in currentMembership.organization) {
+      await setCurrentOrganizationId(currentMembership.organization.id)
+    }
+  }
+
+  const currentOrg = currentMembership.organization as any
 
   return (
     <div>

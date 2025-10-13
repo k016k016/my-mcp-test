@@ -8,7 +8,7 @@
 2. **Cloudflare R2** - オブジェクトストレージ
 3. **Upstash Redis** - キャッシュ・セッション管理
 4. **Sentry** - エラー監視
-5. **PostHog** - プロダクト分析
+5. **Logflare** - ログ管理・監査ログ
 6. **Chargebee** - サブスクリプション決済
 7. **Resend** - トランザクショナルメール
 
@@ -233,44 +233,82 @@ SENTRY_AUTH_TOKEN=sntrys_abc123def456...
 
 ---
 
-## 5. PostHog（推奨）
+## 5. Logflare（推奨）
 
 ### アカウント作成
 
-1. https://posthog.com/signup にアクセス
-2. メールアドレスとパスワードを入力、またはGoogleでサインアップ
+1. https://logflare.app にアクセス
+2. GitHubまたはGoogleでサインアップ
 3. メール確認
 
-### プロジェクト設定
+### Source作成（ログの送信先）
 
-1. 初回ログイン時、プロジェクト設定画面が表示される
+1. ダッシュボードで「Create Source」をクリック
 2. 以下を入力：
-   - **Organization name**: `My SaaS`
-   - **Project name**: `Development`
-   - **What is your role**: 適切なものを選択
-3. 「Continue」をクリック
+   - **Source name**: `my-saas-logs`（開発用）
+   - **Description**: Application and audit logs
+3. 「Create Source」をクリック
 
-### Project API Keyの取得
+### API KeyとSource IDの取得
 
-1. 左サイドバーの「Project」→「Settings」
-2. 「Project API Key」をコピー → `NEXT_PUBLIC_POSTHOG_KEY`
-3. 「Host」を確認（通常は `https://app.posthog.com`）→ `NEXT_PUBLIC_POSTHOG_HOST`
+1. ダッシュボード右上のアカウントアイコン →「Account」
+2. 「API Keys」タブをクリック
+3. **API Key**をコピー → `NEXT_PUBLIC_LOGFLARE_API_KEY`
+4. 作成したSourceをクリック
+5. Source詳細ページで **Source ID** をコピー → `NEXT_PUBLIC_LOGFLARE_SOURCE_ID`
 
 ### 環境変数に設定
 
 `.env.development` を編集：
 ```bash
-# PostHog（開発用プロジェクト）
-NEXT_PUBLIC_POSTHOG_KEY=phc_abcdef1234567890abcdef1234567890abcdef
-NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
+# Logflare（開発用）
+NEXT_PUBLIC_LOGFLARE_API_KEY=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+NEXT_PUBLIC_LOGFLARE_SOURCE_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 ```
 
 ### 複数環境の設定（推奨）
 
-PostHogで環境ごとに別プロジェクトを作成：
-1. 左上のプロジェクト名→「+ New project」
-2. `Staging` と `Production` プロジェクトを作成
-3. 各プロジェクトのAPI Keyを対応する `.env.*` に設定
+Logflareで環境ごとに別Sourceを作成：
+1. 「Create Source」で `my-saas-staging` と `my-saas-production` を作成
+2. 各SourceのSource IDを対応する `.env.*` に設定
+3. API Keyは同じものを使用可能
+
+### 使用方法
+
+```typescript
+import { logger } from '@/lib/logflare'
+
+// 監査ログ
+await logger.audit('user_login', {
+  userId: user.id,
+  organizationId: org.id,
+})
+
+// 一般ログ
+logger.info('処理完了', { itemCount: 10 })
+
+// エラーログ
+logger.error('エラー発生', new Error('Something went wrong'))
+```
+
+### Logflareでのログ検索
+
+Logflareダッシュボードで以下のようにSQLライクなクエリが可能：
+```sql
+-- 特定ユーザーのログ
+SELECT * FROM logs WHERE metadata.userId = 'user123'
+
+-- エラーログのみ
+SELECT * FROM logs WHERE level = 'error'
+
+-- 監査ログのみ
+SELECT * FROM logs WHERE metadata.isAudit = true
+```
+
+### 料金
+
+- **無料プラン**: 月12百万イベント、7日保持
+- **有料プラン**: $5/月〜（月100百万イベント、30日保持）
 
 ---
 
@@ -412,9 +450,9 @@ SENTRY_ORG=
 SENTRY_PROJECT=
 SENTRY_AUTH_TOKEN=
 
-# PostHog（開発用プロジェクト）
-NEXT_PUBLIC_POSTHOG_KEY=phc_abcdef1234567890abcdef1234567890abcdef
-NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
+# Logflare（開発用）
+NEXT_PUBLIC_LOGFLARE_API_KEY=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+NEXT_PUBLIC_LOGFLARE_SOURCE_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 
 # Chargebee（テストモード）
 CHARGEBEE_SITE=my-saas-test
@@ -480,10 +518,10 @@ RESEND_API_KEY=re_abc123def456...
   - [ ] DSNとAuth Token取得
   - [ ] `.env.staging` と `.env.production` に設定
 
-- [ ] **PostHog**
+- [ ] **Logflare**
   - [ ] アカウント作成
-  - [ ] プロジェクト作成
-  - [ ] API Key取得
+  - [ ] Source作成
+  - [ ] API KeyとSource ID取得
   - [ ] `.env.development` に設定
 
 ### オプションサービス
@@ -568,6 +606,6 @@ RESEND_API_KEY=re_abc123def456...
 - [Cloudflare R2 Documentation](https://developers.cloudflare.com/r2/)
 - [Upstash Redis Documentation](https://docs.upstash.com/redis)
 - [Sentry Next.js Documentation](https://docs.sentry.io/platforms/javascript/guides/nextjs/)
-- [PostHog Next.js Documentation](https://posthog.com/docs/libraries/next-js)
+- [Logflare Documentation](https://logflare.app/guides)
 - [Chargebee API Documentation](https://apidocs.chargebee.com/docs/api)
 - [Resend Documentation](https://resend.com/docs)
