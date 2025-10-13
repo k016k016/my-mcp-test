@@ -3,11 +3,6 @@ import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   /* config options here */
-
-  // Instrumentation APIを有効化（Sentry用）
-  experimental: {
-    instrumentationHook: true,
-  },
 };
 
 // Sentryの設定でNext.js設定をラップ
