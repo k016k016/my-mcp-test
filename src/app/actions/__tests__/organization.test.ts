@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createOrganization, updateOrganization, getUserOrganizations, deleteOrganization, switchOrganization } from '../organization'
 
+// UUID形式のテストデータ
+const TEST_ORG_ID = '00000000-0000-0000-0000-000000000001'
+const TEST_USER_ID = '00000000-0000-0000-0000-000000000002'
+
 // Supabaseクライアントのモック
 const mockSupabase = {
   auth: {
@@ -50,7 +54,7 @@ describe('Organization Actions', () => {
 
     it('slugが重複している場合、エラーを返す', async () => {
       mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: { id: 'user-1' } },
+        data: { user: { id: TEST_USER_ID } },
         error: null,
       })
 
@@ -84,9 +88,9 @@ describe('Organization Actions', () => {
     })
 
     it('組織を正常に作成できる', async () => {
-      const mockUser = { id: 'user-1' }
+      const mockUser = { id: TEST_USER_ID }
       const mockOrganization = {
-        id: 'org-1',
+        id: TEST_ORG_ID,
         name: 'テスト組織',
         slug: 'test-org',
         subscription_plan: 'free',
@@ -186,7 +190,7 @@ describe('Organization Actions', () => {
 
     it('組織作成に失敗した場合、エラーを返す', async () => {
       mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: { id: 'user-1' } },
+        data: { user: { id: TEST_USER_ID } },
         error: null,
       })
 
@@ -245,7 +249,7 @@ describe('Organization Actions', () => {
       })
 
       expect(result).toEqual({
-        error: '組織の作成に失敗しました: Database error',
+        error: '組織の作成に失敗しました。もう一度お試しください。',
       })
     })
   })
@@ -257,14 +261,14 @@ describe('Organization Actions', () => {
         error: new Error('Not authenticated'),
       })
 
-      const result = await updateOrganization('org-1', { name: '新しい名前' })
+      const result = await updateOrganization(TEST_ORG_ID, { name: '新しい名前' })
 
       expect(result).toEqual({ error: '認証が必要です' })
     })
 
     it('権限がない場合、エラーを返す', async () => {
       mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: { id: 'user-1' } },
+        data: { user: { id: TEST_USER_ID } },
         error: null,
       })
 
@@ -292,15 +296,15 @@ describe('Organization Actions', () => {
         single: mockSingle,
       })
 
-      const result = await updateOrganization('org-1', { name: '新しい名前' })
+      const result = await updateOrganization(TEST_ORG_ID, { name: '新しい名前' })
 
       expect(result).toEqual({ error: '権限がありません' })
     })
 
     it('オーナーが組織を更新できる', async () => {
-      const mockUser = { id: 'user-1' }
+      const mockUser = { id: TEST_USER_ID }
       const mockOrganization = {
-        id: 'org-1',
+        id: TEST_ORG_ID,
         name: '更新後の組織名',
       }
 
@@ -379,7 +383,7 @@ describe('Organization Actions', () => {
         single: mockSingleUpdate,
       })
 
-      const result = await updateOrganization('org-1', { name: '更新後の組織名' })
+      const result = await updateOrganization(TEST_ORG_ID, { name: '更新後の組織名' })
 
       expect(result).toEqual({
         success: true,
@@ -401,12 +405,12 @@ describe('Organization Actions', () => {
     })
 
     it('ユーザーの組織一覧を取得できる', async () => {
-      const mockUser = { id: 'user-1' }
+      const mockUser = { id: TEST_USER_ID }
       const mockMemberships = [
         {
           role: 'owner',
           organization: {
-            id: 'org-1',
+            id: TEST_ORG_ID,
             name: '組織1',
             slug: 'org-1',
             subscription_plan: 'pro',
@@ -415,7 +419,7 @@ describe('Organization Actions', () => {
         {
           role: 'member',
           organization: {
-            id: 'org-2',
+            id: '00000000-0000-0000-0000-000000000003',
             name: '組織2',
             slug: 'org-2',
             subscription_plan: 'free',
@@ -459,7 +463,7 @@ describe('Organization Actions', () => {
   describe('deleteOrganization', () => {
     it('オーナーでない場合、エラーを返す', async () => {
       mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: { id: 'user-1' } },
+        data: { user: { id: TEST_USER_ID } },
         error: null,
       })
 
@@ -487,7 +491,7 @@ describe('Organization Actions', () => {
         single: mockSingle,
       })
 
-      const result = await deleteOrganization('org-1')
+      const result = await deleteOrganization(TEST_ORG_ID)
 
       expect(result).toEqual({ error: 'オーナーのみが組織を削除できます' })
     })
@@ -496,7 +500,7 @@ describe('Organization Actions', () => {
   describe('switchOrganization', () => {
     it('組織のメンバーでない場合、エラーを返す', async () => {
       mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: { id: 'user-1' } },
+        data: { user: { id: TEST_USER_ID } },
         error: null,
       })
 
@@ -524,13 +528,13 @@ describe('Organization Actions', () => {
         single: mockSingle,
       })
 
-      const result = await switchOrganization('org-1')
+      const result = await switchOrganization(TEST_ORG_ID)
 
       expect(result).toEqual({ error: 'この組織にアクセスする権限がありません' })
     })
 
     it('組織を正常に切り替えできる', async () => {
-      const mockUser = { id: 'user-1' }
+      const mockUser = { id: TEST_USER_ID }
 
       mockSupabase.auth.getUser.mockResolvedValue({
         data: { user: mockUser },
@@ -541,7 +545,7 @@ describe('Organization Actions', () => {
       const mockEq1 = vi.fn().mockReturnThis()
       const mockEq2 = vi.fn().mockReturnThis()
       const mockSingle = vi.fn().mockResolvedValue({
-        data: { id: 'member-1' }, // メンバーである
+        data: { id: '00000000-0000-0000-0000-000000000004' }, // メンバーである
         error: null,
       })
 
@@ -561,7 +565,7 @@ describe('Organization Actions', () => {
         single: mockSingle,
       })
 
-      const result = await switchOrganization('org-1')
+      const result = await switchOrganization(TEST_ORG_ID)
 
       expect(result).toEqual({ success: true })
     })

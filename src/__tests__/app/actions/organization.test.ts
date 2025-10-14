@@ -1,6 +1,10 @@
 // 組織管理Server Actionsのテスト
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
+// UUID形式のテストデータ
+const TEST_ORG_ID = '00000000-0000-0000-0000-000000000001'
+const TEST_USER_ID = '00000000-0000-0000-0000-000000000002'
+
 // Supabaseモックを設定
 const mockFrom = vi.fn()
 const mockGetUser = vi.fn()
@@ -55,7 +59,7 @@ describe('Organization Server Actions', () => {
 
     // デフォルトで認証されたユーザーを返す
     mockGetUser.mockResolvedValue({
-      data: { user: { id: 'user-123', email: 'test@example.com' } },
+      data: { user: { id: TEST_USER_ID, email: 'test@example.com' } },
       error: null,
     })
   })
@@ -75,7 +79,7 @@ describe('Organization Server Actions', () => {
               select: vi.fn().mockReturnValue({
                 single: vi.fn().mockResolvedValue({
                   data: {
-                    id: 'org-123',
+                    id: TEST_ORG_ID,
                     name: 'Test Org',
                     slug: 'test-org',
                     subscription_plan: 'free',
@@ -173,7 +177,7 @@ describe('Organization Server Actions', () => {
               select: vi.fn().mockReturnValue({
                 single: vi.fn().mockResolvedValue({
                   data: {
-                    id: 'org-123',
+                    id: TEST_ORG_ID,
                     name: 'Test Org',
                     slug: 'test-org',
                   },
@@ -235,7 +239,7 @@ describe('Organization Server Actions', () => {
                 select: vi.fn().mockReturnValue({
                   single: vi.fn().mockResolvedValue({
                     data: {
-                      id: 'org-123',
+                      id: TEST_ORG_ID,
                       name: 'Updated Org',
                       slug: 'updated-org',
                     },
@@ -254,7 +258,7 @@ describe('Organization Server Actions', () => {
         return {}
       })
 
-      const result = await updateOrganization('org-123', {
+      const result = await updateOrganization(TEST_ORG_ID, {
         name: 'Updated Org',
       })
 
@@ -280,7 +284,7 @@ describe('Organization Server Actions', () => {
               eq: vi.fn().mockReturnValue({
                 select: vi.fn().mockReturnValue({
                   single: vi.fn().mockResolvedValue({
-                    data: { id: 'org-123', name: 'Updated Org' },
+                    data: { id: TEST_ORG_ID, name: 'Updated Org' },
                     error: null,
                   }),
                 }),
@@ -296,7 +300,7 @@ describe('Organization Server Actions', () => {
         return {}
       })
 
-      const result = await updateOrganization('org-123', {
+      const result = await updateOrganization(TEST_ORG_ID, {
         name: 'Updated Org',
       })
 
@@ -313,7 +317,7 @@ describe('Organization Server Actions', () => {
         }),
       })
 
-      const result = await updateOrganization('org-123', {
+      const result = await updateOrganization(TEST_ORG_ID, {
         name: 'Updated Org',
       })
 
@@ -399,7 +403,7 @@ describe('Organization Server Actions', () => {
         return {}
       })
 
-      await expect(deleteOrganization('org-123')).rejects.toThrow('REDIRECT: /')
+      await expect(deleteOrganization(TEST_ORG_ID)).rejects.toThrow('REDIRECT: /')
     })
 
     it('オーナー以外の削除を拒否する', async () => {
@@ -412,7 +416,7 @@ describe('Organization Server Actions', () => {
         }),
       })
 
-      const result = await deleteOrganization('org-123')
+      const result = await deleteOrganization(TEST_ORG_ID)
 
       expect(result?.error).toBe('オーナーのみが組織を削除できます')
     })
@@ -434,10 +438,10 @@ describe('Organization Server Actions', () => {
         }),
       })
 
-      const result = await switchOrganization('org-123')
+      const result = await switchOrganization(TEST_ORG_ID)
 
       expect(result.success).toBe(true)
-      expect(mockSetCurrentOrganizationId).toHaveBeenCalledWith('org-123')
+      expect(mockSetCurrentOrganizationId).toHaveBeenCalledWith(TEST_ORG_ID)
     })
 
     it('非メンバーの組織への切り替えを拒否する', async () => {
@@ -450,7 +454,7 @@ describe('Organization Server Actions', () => {
         }),
       })
 
-      const result = await switchOrganization('org-123')
+      const result = await switchOrganization(TEST_ORG_ID)
 
       expect(result.error).toBe('この組織にアクセスする権限がありません')
     })
