@@ -19,17 +19,11 @@ export const emailSchema = z
 
 /**
  * パスワードのバリデーション
- * - 8文字以上
- * - 大文字を1文字以上含む
- * - 小文字を1文字以上含む
- * - 数字を1文字以上含む
+ * - 6文字以上
  */
 export const passwordSchema = z
   .string()
-  .min(8, 'パスワードは8文字以上必要です')
-  .regex(/[A-Z]/, 'パスワードには大文字を1文字以上含める必要があります')
-  .regex(/[a-z]/, 'パスワードには小文字を1文字以上含める必要があります')
-  .regex(/[0-9]/, 'パスワードには数字を1文字以上含める必要があります')
+  .min(6, 'パスワードは6文字以上必要です')
 
 /**
  * サインアップのバリデーション
@@ -198,7 +192,7 @@ export function validateFormData<T extends z.ZodTypeAny>(
     const validatedData = schema.parse(data)
     return { success: true, data: validatedData }
   } catch (error) {
-    if (error instanceof z.ZodError) {
+    if (error instanceof z.ZodError && error.errors && error.errors.length > 0) {
       const firstError = error.errors[0]
       return { success: false, error: firstError.message }
     }
@@ -217,7 +211,7 @@ export function validateData<T extends z.ZodTypeAny>(
     const validatedData = schema.parse(data)
     return { success: true, data: validatedData }
   } catch (error) {
-    if (error instanceof z.ZodError) {
+    if (error instanceof z.ZodError && error.errors && error.errors.length > 0) {
       const firstError = error.errors[0]
       return { success: false, error: firstError.message }
     }

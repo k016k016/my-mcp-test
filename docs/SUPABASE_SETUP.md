@@ -17,8 +17,8 @@
 4. 以下の値をコピーして`.env.local`に貼り付け:
 
 \`\`\`bash
-NEXT_PUBLIC_SUPABASE_URL=your-project-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+NEXT_PUBLIC_SUPABASE_URL=https://qtjcoffmwmqgfdqimlis.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0amNvZmZtd21xZ2ZkcWltbGlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0MDgzMzcsImV4cCI6MjA3NTk4NDMzN30.Ax41_ZA8p-eMmIT0i_BxRp98X3yquTVujYIes5X3BbQ
 \`\`\`
 
 ## 2. プロジェクト構成

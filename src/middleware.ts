@@ -18,10 +18,11 @@ export async function middleware(request: NextRequest) {
 
   // OPSドメインの場合はIP制限をチェック
   if (domain === DOMAINS.OPS) {
-    const allowedIps = process.env.OPS_ALLOWED_IPS?.split(',').map(ip => ip.trim()) || []
+    const allowedIpsEnv = process.env.OPS_ALLOWED_IPS?.trim()
+    const allowedIps = allowedIpsEnv ? allowedIpsEnv.split(',').map(ip => ip.trim()) : []
 
     // 許可IPリストが設定されている場合のみチェック
-    if (allowedIps.length > 0) {
+    if (allowedIps.length > 0 && allowedIps[0] !== '') {
       // クライアントIPを取得（プロキシ経由の場合も考慮）
       const clientIp =
         request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||

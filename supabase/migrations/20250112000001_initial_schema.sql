@@ -5,8 +5,9 @@
 -- 1. 拡張機能の有効化
 -- ============================================================================
 
--- UUID生成用
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- UUID生成用（Supabase Cloudではpgcryptoを使用）
+-- CREATE EXTENSION IF NOT EXISTS "uuid-ossp"; -- 不要
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- PostGIS（位置情報）
 CREATE EXTENSION IF NOT EXISTS "postgis";
@@ -35,7 +36,7 @@ CREATE TYPE invitation_status AS ENUM ('pending', 'accepted', 'expired');
 -- 3.1 Organizations（組織/テナント）
 -- ----------------------------------------------------------------------------
 CREATE TABLE organizations (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     slug TEXT UNIQUE NOT NULL, -- URL用の一意な識別子（例: acme-corp）
 
@@ -87,7 +88,7 @@ CREATE INDEX idx_profiles_email ON profiles(email);
 -- 組織とユーザーの多対多の関係
 -- ----------------------------------------------------------------------------
 CREATE TABLE organization_members (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     role organization_role NOT NULL DEFAULT 'member',
@@ -109,7 +110,7 @@ CREATE INDEX idx_organization_members_role ON organization_members(role);
 -- 3.4 Invitations（招待）
 -- ----------------------------------------------------------------------------
 CREATE TABLE invitations (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     email TEXT NOT NULL,
     role organization_role NOT NULL DEFAULT 'member',
@@ -134,7 +135,7 @@ CREATE INDEX idx_invitations_status ON invitations(status);
 -- 3.5 AuditLogs（監査ログ）
 -- ----------------------------------------------------------------------------
 CREATE TABLE audit_logs (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     user_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
 
@@ -160,7 +161,7 @@ CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at DESC);
 -- プランごとの制限を管理
 -- ----------------------------------------------------------------------------
 CREATE TABLE usage_limits (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     plan subscription_plan NOT NULL UNIQUE,
 
     -- 制限値（-1は無制限）
@@ -186,7 +187,7 @@ INSERT INTO usage_limits (plan, max_members, max_projects, max_storage_gb, max_a
 -- 組織ごとの使用量を記録
 -- ----------------------------------------------------------------------------
 CREATE TABLE usage_tracking (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
 
     -- 期間（月次）
@@ -235,24 +236,24 @@ CREATE TRIGGER update_usage_tracking_updated_at BEFORE UPDATE ON usage_tracking 
 -- ----------------------------------------------------------------------------
 -- 4.2 新規ユーザー登録時にプロフィールを自動作成
 -- ----------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION handle_new_user()
+CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO profiles (id, email, full_name, avatar_url)
+    INSERT INTO public.profiles (id, email, full_name, avatar_url)
     VALUES (
         NEW.id,
         NEW.email,
-        NEW.raw_user_meta_data->>'full_name',
-        NEW.raw_user_meta_data->>'avatar_url'
+        COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
+        COALESCE(NEW.raw_user_meta_data->>'avatar_url', '')
     );
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- トリガー
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
-    FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- ============================================================================
 -- 5. コメント（ドキュメント）

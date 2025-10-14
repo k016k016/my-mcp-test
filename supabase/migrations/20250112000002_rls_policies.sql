@@ -15,19 +15,10 @@ ALTER TABLE usage_tracking ENABLE ROW LEVEL SECURITY;
 -- ============================================================================
 -- 2. ヘルパー関数
 -- ============================================================================
+-- 注意: auth.uid()を直接使用します（Supabase組み込み関数）
 
 -- ----------------------------------------------------------------------------
--- 2.1 現在のユーザーIDを取得
--- ----------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION auth.user_id()
-RETURNS UUID AS $$
-BEGIN
-    RETURN (SELECT auth.uid());
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- ----------------------------------------------------------------------------
--- 2.2 ユーザーが所属する組織IDのリストを取得
+-- 2.1 ユーザーが所属する組織IDのリストを取得
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION get_user_organizations()
 RETURNS SETOF UUID AS $$
@@ -35,12 +26,12 @@ BEGIN
     RETURN QUERY
     SELECT organization_id
     FROM organization_members
-    WHERE user_id = auth.user_id();
+    WHERE user_id = auth.uid();
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ----------------------------------------------------------------------------
--- 2.3 ユーザーが組織のメンバーかチェック
+-- 2.2 ユーザーが組織のメンバーかチェック
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION is_organization_member(org_id UUID)
 RETURNS BOOLEAN AS $$
@@ -49,13 +40,13 @@ BEGIN
         SELECT 1
         FROM organization_members
         WHERE organization_id = org_id
-        AND user_id = auth.user_id()
+        AND user_id = auth.uid()
     );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ----------------------------------------------------------------------------
--- 2.4 ユーザーの組織内ロールを取得
+-- 2.3 ユーザーの組織内ロールを取得
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION get_user_role(org_id UUID)
 RETURNS organization_role AS $$
@@ -64,13 +55,13 @@ BEGIN
         SELECT role
         FROM organization_members
         WHERE organization_id = org_id
-        AND user_id = auth.user_id()
+        AND user_id = auth.uid()
     );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ----------------------------------------------------------------------------
--- 2.5 ユーザーが組織のオーナーまたは管理者かチェック
+-- 2.4 ユーザーが組織のオーナーまたは管理者かチェック
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION is_organization_admin(org_id UUID)
 RETURNS BOOLEAN AS $$
@@ -79,7 +70,7 @@ BEGIN
         SELECT 1
         FROM organization_members
         WHERE organization_id = org_id
-        AND user_id = auth.user_id()
+        AND user_id = auth.uid()
         AND role IN ('owner', 'admin')
     );
 END;
@@ -117,7 +108,7 @@ CREATE POLICY "Owners can delete their organizations"
             SELECT 1
             FROM organization_members
             WHERE organization_id = id
-            AND user_id = auth.user_id()
+            AND user_id = auth.uid()
             AND role = 'owner'
         )
     );
@@ -136,14 +127,14 @@ CREATE POLICY "Profiles are viewable by everyone"
 CREATE POLICY "Users can create their own profile"
     ON profiles FOR INSERT
     TO authenticated
-    WITH CHECK (id = auth.user_id());
+    WITH CHECK (id = auth.uid());
 
 -- UPDATE: 自分のプロフィールのみ更新可能
 CREATE POLICY "Users can update their own profile"
     ON profiles FOR UPDATE
     TO authenticated
-    USING (id = auth.user_id())
-    WITH CHECK (id = auth.user_id());
+    USING (id = auth.uid())
+    WITH CHECK (id = auth.uid());
 
 -- ============================================================================
 -- 5. OrganizationMembersテーブルのポリシー
@@ -174,7 +165,7 @@ CREATE POLICY "Admins can remove members or users can leave"
     TO authenticated
     USING (
         is_organization_admin(organization_id)
-        OR user_id = auth.user_id()
+        OR user_id = auth.uid()
     );
 
 -- ============================================================================
@@ -187,7 +178,7 @@ CREATE POLICY "Admins and invitees can view invitations"
     TO authenticated
     USING (
         is_organization_admin(organization_id)
-        OR email = (SELECT email FROM profiles WHERE id = auth.user_id())
+        OR email = (SELECT email FROM profiles WHERE id = auth.uid())
     );
 
 -- INSERT: 組織の管理者のみ招待を作成可能
@@ -202,11 +193,11 @@ CREATE POLICY "Admins and invitees can update invitations"
     TO authenticated
     USING (
         is_organization_admin(organization_id)
-        OR email = (SELECT email FROM profiles WHERE id = auth.user_id())
+        OR email = (SELECT email FROM profiles WHERE id = auth.uid())
     )
     WITH CHECK (
         is_organization_admin(organization_id)
-        OR email = (SELECT email FROM profiles WHERE id = auth.user_id())
+        OR email = (SELECT email FROM profiles WHERE id = auth.uid())
     );
 
 -- DELETE: 組織の管理者のみ招待を削除可能

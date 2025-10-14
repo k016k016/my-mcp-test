@@ -21,14 +21,14 @@ const envSchema = z.object({
   R2_ACCESS_KEY_ID: z.string().optional(),
   R2_SECRET_ACCESS_KEY: z.string().optional(),
   R2_BUCKET_NAME: z.string().optional(),
-  R2_PUBLIC_URL: z.string().url().optional().or(z.literal('')),
+  R2_PUBLIC_URL: z.union([z.string().url(), z.literal('')]).optional(),
 
   // Upstash Redis設定
-  UPSTASH_REDIS_REST_URL: z.string().url('Redis REST URLは有効なURLである必要があります').optional(),
+  UPSTASH_REDIS_REST_URL: z.union([z.string().url('Redis REST URLは有効なURLである必要があります'), z.literal('')]).optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
 
   // Sentry設定
-  NEXT_PUBLIC_SENTRY_DSN: z.string().url().optional().or(z.literal('')),
+  NEXT_PUBLIC_SENTRY_DSN: z.union([z.string().url(), z.literal('')]).optional(),
   SENTRY_ORG: z.string().optional(),
   SENTRY_PROJECT: z.string().optional(),
   SENTRY_AUTH_TOKEN: z.string().optional(),
@@ -44,7 +44,7 @@ const envSchema = z.object({
 
   // Resend設定
   RESEND_API_KEY: z.string().optional(),
-  RESEND_FROM_EMAIL: z.string().email().optional().or(z.literal('')),
+  RESEND_FROM_EMAIL: z.union([z.string().email(), z.literal('')]).optional(),
 
   // OPS IP制限
   OPS_ALLOWED_IPS: z.string().optional(),
@@ -59,7 +59,7 @@ function parseEnv() {
   try {
     return envSchema.parse(process.env)
   } catch (error) {
-    if (error instanceof z.ZodError) {
+    if (error instanceof z.ZodError && error.errors) {
       console.error('❌ 環境変数の検証エラー:')
       error.errors.forEach((err) => {
         console.error(`  - ${err.path.join('.')}: ${err.message}`)
@@ -71,6 +71,8 @@ function parseEnv() {
       }
 
       console.warn('⚠️  開発環境のため続行しますが、環境変数を正しく設定してください。')
+    } else {
+      console.error('❌ 予期しないエラーが発生しました:', error)
     }
 
     // エラーが発生した場合でも、型安全性を保つためにデフォルト値を返す
