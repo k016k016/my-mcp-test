@@ -40,14 +40,14 @@ describe('Members Actions', () => {
         error: new Error('Not authenticated'),
       })
 
-      const result = await inviteMember('org-1', 'test@example.com', 'member')
+      const result = await inviteMember('00000000-0000-4000-8000-000000000001', 'test@example.com', 'member')
 
       expect(result).toEqual({ error: '認証が必要です' })
     })
 
     it('権限がない場合、エラーを返す', async () => {
       mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: { id: 'user-1' } },
+        data: { user: { id: '00000000-0000-4000-8000-000000000002' } },
         error: null,
       })
 
@@ -75,14 +75,14 @@ describe('Members Actions', () => {
         single: mockSingle,
       })
 
-      const result = await inviteMember('org-1', 'test@example.com', 'member')
+      const result = await inviteMember('00000000-0000-4000-8000-000000000001', 'test@example.com', 'member')
 
       expect(result).toEqual({ error: 'メンバーを招待する権限がありません' })
     })
 
     it('既に招待済みの場合、エラーを返す', async () => {
       mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: { id: 'user-1' } },
+        data: { user: { id: '00000000-0000-4000-8000-000000000002' } },
         error: null,
       })
 
@@ -115,7 +115,7 @@ describe('Members Actions', () => {
         }
       })
 
-      const result = await inviteMember('org-1', 'test@example.com', 'member')
+      const result = await inviteMember('00000000-0000-4000-8000-000000000001', 'test@example.com', 'member')
 
       expect(result).toEqual({ error: 'このメールアドレスには既に招待を送信しています' })
     })
@@ -128,14 +128,14 @@ describe('Members Actions', () => {
         error: new Error('Not authenticated'),
       })
 
-      const result = await acceptInvitation('invalid-token')
+      const result = await acceptInvitation('00000000-0000-4000-8888-888888888888')
 
       expect(result).toEqual({ error: '認証が必要です。ログインしてから再度お試しください。' })
     })
 
     it('招待が見つからない場合、エラーを返す', async () => {
       mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: { id: 'user-1' } },
+        data: { user: { id: '00000000-0000-4000-8000-000000000002' } },
         error: null,
       })
 
@@ -148,14 +148,14 @@ describe('Members Actions', () => {
         }),
       })
 
-      const result = await acceptInvitation('invalid-token')
+      const result = await acceptInvitation('00000000-0000-4000-8888-888888888888')
 
       expect(result).toEqual({ error: '招待が見つかりません、または既に使用されています' })
     })
 
     it('有効期限が切れている場合、エラーを返す', async () => {
       mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: { id: 'user-1' } },
+        data: { user: { id: '00000000-0000-4000-8000-000000000002' } },
         error: null,
       })
 
@@ -174,14 +174,14 @@ describe('Members Actions', () => {
         }),
       })
 
-      const result = await acceptInvitation('valid-token')
+      const result = await acceptInvitation('00000000-0000-4000-8777-777777777777')
 
       expect(result).toEqual({ error: '招待の有効期限が切れています' })
     })
 
     it('メールアドレスが一致しない場合、エラーを返す', async () => {
       mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: { id: 'user-1' } },
+        data: { user: { id: '00000000-0000-4000-8000-000000000002' } },
         error: null,
       })
 
@@ -201,7 +201,7 @@ describe('Members Actions', () => {
                 id: 'invitation-1',
                 email: 'invited@example.com',
                 expires_at: futureDate.toISOString(),
-                organization_id: 'org-1',
+                organization_id: '00000000-0000-4000-8000-000000000001',
                 role: 'member',
               },
               error: null,
@@ -222,7 +222,7 @@ describe('Members Actions', () => {
         }
       })
 
-      const result = await acceptInvitation('valid-token')
+      const result = await acceptInvitation('00000000-0000-4000-8777-777777777777')
 
       expect(result).toEqual({
         error: 'この招待は invited@example.com 宛てです。正しいアカウントでログインしてください。',
@@ -231,7 +231,7 @@ describe('Members Actions', () => {
 
     it('既にメンバーの場合、エラーを返す', async () => {
       mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: { id: 'user-1' } },
+        data: { user: { id: '00000000-0000-4000-8000-000000000002' } },
         error: null,
       })
 
@@ -250,7 +250,7 @@ describe('Members Actions', () => {
                 id: 'invitation-1',
                 email: 'test@example.com',
                 expires_at: futureDate.toISOString(),
-                organization_id: 'org-1',
+                organization_id: '00000000-0000-4000-8000-000000000001',
                 role: 'member',
               },
               error: null,
@@ -274,14 +274,14 @@ describe('Members Actions', () => {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({
-              data: { id: 'member-1' }, // 既にメンバー
+              data: { id: '00000000-0000-4000-8000-000000000004' }, // 既にメンバー
               error: null,
             }),
           }
         }
       })
 
-      const result = await acceptInvitation('valid-token')
+      const result = await acceptInvitation('00000000-0000-4000-8777-777777777777')
 
       expect(result).toEqual({ error: '既に組織のメンバーです' })
     })
@@ -294,14 +294,14 @@ describe('Members Actions', () => {
         error: new Error('Not authenticated'),
       })
 
-      const result = await updateMemberRole('org-1', 'member-1', 'admin')
+      const result = await updateMemberRole('00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000004', 'admin')
 
       expect(result).toEqual({ error: '認証が必要です' })
     })
 
     it('権限がない場合、エラーを返す', async () => {
       mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: { id: 'user-1' } },
+        data: { user: { id: '00000000-0000-4000-8000-000000000002' } },
         error: null,
       })
 
@@ -314,14 +314,14 @@ describe('Members Actions', () => {
         }),
       })
 
-      const result = await updateMemberRole('org-1', 'member-1', 'admin')
+      const result = await updateMemberRole('00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000004', 'admin')
 
       expect(result).toEqual({ error: 'ロールを変更する権限がありません' })
     })
 
     it('メンバーが見つからない場合、エラーを返す', async () => {
       mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: { id: 'user-1' } },
+        data: { user: { id: '00000000-0000-4000-8000-000000000002' } },
         error: null,
       })
 
@@ -354,14 +354,14 @@ describe('Members Actions', () => {
         }
       })
 
-      const result = await updateMemberRole('org-1', 'invalid-member', 'admin')
+      const result = await updateMemberRole('00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8999-999999999999', 'admin')
 
       expect(result).toEqual({ error: 'メンバーが見つかりません' })
     })
 
     it('オーナー以外がオーナーを指定しようとした場合、エラーを返す', async () => {
       mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: { id: 'user-1' } },
+        data: { user: { id: '00000000-0000-4000-8000-000000000002' } },
         error: null,
       })
 
@@ -385,21 +385,21 @@ describe('Members Actions', () => {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({
-              data: { role: 'member', user_id: 'user-2' },
+              data: { role: 'member', user_id: '00000000-0000-4000-8000-000000000003' },
               error: null,
             }),
           }
         }
       })
 
-      const result = await updateMemberRole('org-1', 'member-1', 'owner')
+      const result = await updateMemberRole('00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000004', 'owner')
 
       expect(result).toEqual({ error: 'オーナーのみが新しいオーナーを指定できます' })
     })
 
     it('オーナーが自分自身のロールを変更しようとした場合、エラーを返す', async () => {
       mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: { id: 'user-1' } },
+        data: { user: { id: '00000000-0000-4000-8000-000000000002' } },
         error: null,
       })
 
@@ -423,14 +423,14 @@ describe('Members Actions', () => {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({
-              data: { role: 'owner', user_id: 'user-1' }, // 自分自身
+              data: { role: 'owner', user_id: '00000000-0000-4000-8000-000000000002' }, // 自分自身
               error: null,
             }),
           }
         }
       })
 
-      const result = await updateMemberRole('org-1', 'member-1', 'admin')
+      const result = await updateMemberRole('00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000004', 'admin')
 
       expect(result).toEqual({ error: 'オーナーは自分自身のロールを変更できません' })
     })
@@ -443,14 +443,14 @@ describe('Members Actions', () => {
         error: new Error('Not authenticated'),
       })
 
-      const result = await removeMember('org-1', 'member-1')
+      const result = await removeMember('00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000004')
 
       expect(result).toEqual({ error: '認証が必要です' })
     })
 
     it('メンバーが見つからない場合、エラーを返す', async () => {
       mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: { id: 'user-1' } },
+        data: { user: { id: '00000000-0000-4000-8000-000000000002' } },
         error: null,
       })
 
@@ -463,14 +463,14 @@ describe('Members Actions', () => {
         }),
       })
 
-      const result = await removeMember('org-1', 'invalid-member')
+      const result = await removeMember('00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8999-999999999999')
 
       expect(result).toEqual({ error: 'メンバーが見つかりません' })
     })
 
     it('オーナーが自分自身を退出しようとした場合、エラーを返す', async () => {
       mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: { id: 'user-1' } },
+        data: { user: { id: '00000000-0000-4000-8000-000000000002' } },
         error: null,
       })
 
@@ -478,12 +478,12 @@ describe('Members Actions', () => {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({
-          data: { role: 'owner', user_id: 'user-1' }, // 自分自身がowner
+          data: { role: 'owner', user_id: '00000000-0000-4000-8000-000000000002' }, // 自分自身がowner
           error: null,
         }),
       })
 
-      const result = await removeMember('org-1', 'member-1')
+      const result = await removeMember('00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000004')
 
       expect(result).toEqual({
         error: 'オーナーは組織から退出できません。組織を削除するか、他のメンバーをオーナーにしてください。',
@@ -492,7 +492,7 @@ describe('Members Actions', () => {
 
     it('権限がない場合、他人を削除できない', async () => {
       mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: { id: 'user-1' } },
+        data: { user: { id: '00000000-0000-4000-8000-000000000002' } },
         error: null,
       })
 
@@ -506,7 +506,7 @@ describe('Members Actions', () => {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({
-              data: { role: 'member', user_id: 'user-2' }, // 他人
+              data: { role: 'member', user_id: '00000000-0000-4000-8000-000000000003' }, // 他人
               error: null,
             }),
           }
@@ -525,14 +525,14 @@ describe('Members Actions', () => {
         }
       })
 
-      const result = await removeMember('org-1', 'member-1')
+      const result = await removeMember('00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000004')
 
       expect(result).toEqual({ error: 'メンバーを削除する権限がありません' })
     })
 
     it('オーナーを削除することはできない', async () => {
       mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: { id: 'user-1' } },
+        data: { user: { id: '00000000-0000-4000-8000-000000000002' } },
         error: null,
       })
 
@@ -545,7 +545,7 @@ describe('Members Actions', () => {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({
-              data: { role: 'owner', user_id: 'user-2' }, // 他人のowner
+              data: { role: 'owner', user_id: '00000000-0000-4000-8000-000000000003' }, // 他人のowner
               error: null,
             }),
           }
@@ -563,7 +563,7 @@ describe('Members Actions', () => {
         }
       })
 
-      const result = await removeMember('org-1', 'member-1')
+      const result = await removeMember('00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000004')
 
       expect(result).toEqual({ error: 'オーナーを削除することはできません' })
     })

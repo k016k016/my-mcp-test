@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createOrganization, updateOrganization, getUserOrganizations, deleteOrganization, switchOrganization } from '../organization'
 
-// UUID形式のテストデータ
-const TEST_ORG_ID = '00000000-0000-0000-0000-000000000001'
-const TEST_USER_ID = '00000000-0000-0000-0000-000000000002'
+// UUID v4形式のテストデータ（有効なUUID形式）
+const TEST_ORG_ID = '00000000-0000-4000-8000-000000000001'
+const TEST_USER_ID = '00000000-0000-4000-8000-000000000002'
 
 // Supabaseクライアントのモック
 const mockSupabase = {
@@ -20,6 +20,16 @@ vi.mock('next/cache', () => ({
 
 vi.mock('next/navigation', () => ({
   redirect: vi.fn(),
+}))
+
+vi.mock('next/headers', () => ({
+  headers: vi.fn(() => ({
+    get: vi.fn((key: string) => {
+      if (key === 'x-forwarded-for') return '192.168.1.1'
+      if (key === 'user-agent') return 'Test Agent'
+      return null
+    }),
+  })),
 }))
 
 // Supabaseクライアントのモック
@@ -419,7 +429,7 @@ describe('Organization Actions', () => {
         {
           role: 'member',
           organization: {
-            id: '00000000-0000-0000-0000-000000000003',
+            id: '00000000-0000-4000-8000-000000000003',
             name: '組織2',
             slug: 'org-2',
             subscription_plan: 'free',
@@ -545,7 +555,7 @@ describe('Organization Actions', () => {
       const mockEq1 = vi.fn().mockReturnThis()
       const mockEq2 = vi.fn().mockReturnThis()
       const mockSingle = vi.fn().mockResolvedValue({
-        data: { id: '00000000-0000-0000-0000-000000000004' }, // メンバーである
+        data: { id: '00000000-0000-4000-8000-000000000004' }, // メンバーである
         error: null,
       })
 

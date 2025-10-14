@@ -1,9 +1,9 @@
 // 組織管理Server Actionsのテスト
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
-// UUID形式のテストデータ
-const TEST_ORG_ID = '00000000-0000-0000-0000-000000000001'
-const TEST_USER_ID = '00000000-0000-0000-0000-000000000002'
+// UUID v4形式のテストデータ（有効なUUID形式）
+const TEST_ORG_ID = '00000000-0000-4000-8000-000000000001'
+const TEST_USER_ID = '00000000-0000-4000-8000-000000000002'
 
 // Supabaseモックを設定
 const mockFrom = vi.fn()
@@ -25,7 +25,9 @@ vi.mock('next/cache', () => ({
 
 vi.mock('next/navigation', () => ({
   redirect: vi.fn((url: string) => {
-    throw new Error(`REDIRECT: ${url}`)
+    const error = new Error(`REDIRECT: ${url}`) as Error & { digest: string }
+    error.digest = `NEXT_REDIRECT;${url}`
+    throw error
   }),
 }))
 
