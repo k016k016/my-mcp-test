@@ -31,13 +31,22 @@ describe('Rate Limit', () => {
 
   describe('rateLimit', () => {
     it('Redis未設定時は常に成功する', async () => {
-      // Redisをnullに設定
-      vi.mocked(redis).incr = null as any
+      // Redisモジュールをnullとしてモックするためにグローバルモックをリセット
+      vi.doUnmock('@/lib/redis')
+      vi.mock('@/lib/redis', () => ({
+        redis: null,
+      }))
 
-      const result = await rateLimit('test@example.com')
+      // モジュールを再インポート
+      const { rateLimit: rateLimitWithNullRedis } = await import('@/lib/rate-limit')
+
+      const result = await rateLimitWithNullRedis('test@example.com')
 
       expect(result.success).toBe(true)
       expect(result.current).toBe(1)
+
+      // モックを元に戻す
+      vi.doMock('@/lib/redis')
     })
 
     it('制限内のリクエストは成功する', async () => {

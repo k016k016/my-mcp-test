@@ -31,22 +31,20 @@ describe('Validation', () => {
     it('有効なパスワードを許可する', () => {
       expect(passwordSchema.parse('Password123')).toBe('Password123')
       expect(passwordSchema.parse('MyP@ssw0rd')).toBe('MyP@ssw0rd')
+      expect(passwordSchema.parse('pass12')).toBe('pass12') // 6文字以上なら許可
     })
 
-    it('8文字未満のパスワードを拒否する', () => {
+    it('6文字未満のパスワードを拒否する', () => {
       expect(() => passwordSchema.parse('Pass1')).toThrow()
+      expect(() => passwordSchema.parse('abc12')).toThrow()
     })
 
-    it('大文字がないパスワードを拒否する', () => {
-      expect(() => passwordSchema.parse('password123')).toThrow()
-    })
-
-    it('小文字がないパスワードを拒否する', () => {
-      expect(() => passwordSchema.parse('PASSWORD123')).toThrow()
-    })
-
-    it('数字がないパスワードを拒否する', () => {
-      expect(() => passwordSchema.parse('Password')).toThrow()
+    it('大文字・小文字・数字の要件はない（基本スキーマは最小文字数のみチェック）', () => {
+      // パスワードスキーマ自体は6文字以上のみチェック
+      // 強度チェックはcheckPasswordStrength関数で行う
+      expect(passwordSchema.parse('password123')).toBe('password123')
+      expect(passwordSchema.parse('PASSWORD123')).toBe('PASSWORD123')
+      expect(passwordSchema.parse('Password')).toBe('Password')
     })
   })
 

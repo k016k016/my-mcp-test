@@ -12,7 +12,7 @@ export default function WwwLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-600">
       {/* ヘッダー */}
       <header className="border-b">
         <nav className="container mx-auto px-4 py-4">

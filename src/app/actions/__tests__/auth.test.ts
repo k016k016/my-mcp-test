@@ -15,6 +15,15 @@ const mockSupabase = {
   },
 }
 
+// レート制限のモック
+const mockRateLimitLogin = vi.fn()
+const mockRateLimitPasswordReset = vi.fn()
+
+vi.mock('@/lib/rate-limit', () => ({
+  rateLimitLogin: mockRateLimitLogin,
+  rateLimitPasswordReset: mockRateLimitPasswordReset,
+}))
+
 // Next.jsのモック
 vi.mock('next/cache')
 vi.mock('next/navigation')
@@ -27,6 +36,9 @@ vi.mock('@/lib/supabase/server', () => ({
 describe('Auth Actions', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // デフォルトでレート制限を通過
+    mockRateLimitLogin.mockResolvedValue({ success: true, current: 1, limit: 5 })
+    mockRateLimitPasswordReset.mockResolvedValue({ success: true, current: 1, limit: 3 })
   })
 
   describe('signUp', () => {
@@ -78,16 +90,16 @@ describe('Auth Actions', () => {
     it('サインアップに失敗した場合、エラーメッセージを返す', async () => {
       const formData = new FormData()
       formData.append('email', 'test@example.com')
-      formData.append('password', 'weak')
+      formData.append('password', 'Password123')
 
       mockSupabase.auth.signUp.mockResolvedValue({
         data: { user: null, session: null },
-        error: { message: 'Password too weak' },
+        error: { message: 'Database error' },
       })
 
       const result = await signUp(formData)
 
-      expect(result).toEqual({ error: 'Password too weak' })
+      expect(result).toEqual({ error: 'サインアップに失敗しました。もう一度お試しください。' })
       expect(vi.mocked(nextNavigation.redirect)).not.toHaveBeenCalled()
     })
   })
@@ -128,7 +140,7 @@ describe('Auth Actions', () => {
 
       const result = await signIn(formData)
 
-      expect(result).toEqual({ error: 'Invalid login credentials' })
+      expect(result).toEqual({ error: 'メールアドレスまたはパスワードが正しくありません' })
       expect(vi.mocked(nextNavigation.redirect)).not.toHaveBeenCalled()
     })
   })
@@ -153,7 +165,7 @@ describe('Auth Actions', () => {
 
       const result = await signOut()
 
-      expect(result).toEqual({ error: 'Signout failed' })
+      expect(result).toEqual({ error: 'ログアウトに失敗しました。もう一度お試しください。' })
       expect(vi.mocked(nextNavigation.redirect)).not.toHaveBeenCalled()
     })
   })
@@ -172,7 +184,7 @@ describe('Auth Actions', () => {
       expect(mockSupabase.auth.signInWithOAuth).toHaveBeenCalledWith({
         provider: 'google',
         options: {
-          redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+          redirectTo: `${process.env.NEXT_PUBLIC_WWW_URL}/auth/callback`,
         },
       })
       expect(vi.mocked(nextNavigation.redirect)).toHaveBeenCalledWith('https://accounts.google.com/oauth...')
@@ -186,7 +198,7 @@ describe('Auth Actions', () => {
 
       const result = await signInWithGoogle()
 
-      expect(result).toEqual({ error: 'OAuth failed' })
+      expect(result).toEqual({ error: 'Googleログインに失敗しました。もう一度お試しください。' })
       expect(vi.mocked(nextNavigation.redirect)).not.toHaveBeenCalled()
     })
   })
@@ -206,13 +218,13 @@ describe('Auth Actions', () => {
       expect(mockSupabase.auth.resetPasswordForEmail).toHaveBeenCalledWith(
         'test@example.com',
         {
-          redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/reset-password`,
+          redirectTo: `${process.env.NEXT_PUBLIC_WWW_URL}/reset-password`,
         }
       )
-      expect(result).toEqual({ success: 'パスワードリセットメールを送信しました' })
+      expect(result).toEqual({ success: 'パスワードリセットメールを送信しました。受信箱を確認してください。' })
     })
 
-    it('パスワードリセットメールの送信に失敗した場合、エラーメッセージを返す', async () => {
+    it('パスワードリセットメールの送信に失敗した場合でも成功メッセージを返す（セキュリティのため）', async () => {
       const formData = new FormData()
       formData.append('email', 'invalid@example.com')
 
@@ -223,7 +235,7 @@ describe('Auth Actions', () => {
 
       const result = await resetPassword(formData)
 
-      expect(result).toEqual({ error: 'User not found' })
+      expect(result).toEqual({ success: 'パスワードリセットメールを送信しました。受信箱を確認してください。' })
     })
   })
 
@@ -248,7 +260,7 @@ describe('Auth Actions', () => {
 
     it('パスワード更新に失敗した場合、エラーメッセージを返す', async () => {
       const formData = new FormData()
-      formData.append('password', 'weak')
+      formData.append('password', 'Weak123!')
 
       mockSupabase.auth.updateUser.mockResolvedValue({
         data: { user: null },
@@ -257,7 +269,7 @@ describe('Auth Actions', () => {
 
       const result = await updatePassword(formData)
 
-      expect(result).toEqual({ error: 'Password too weak' })
+      expect(result).toEqual({ error: 'パスワードの更新に失敗しました。もう一度お試しください。' })
       expect(vi.mocked(nextNavigation.redirect)).not.toHaveBeenCalled()
     })
   })
