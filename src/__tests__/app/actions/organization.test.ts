@@ -66,15 +66,16 @@ describe('Organization Server Actions', () => {
 
   describe('createOrganization', () => {
     it('有効なデータで組織を作成できる', async () => {
-      const mockSelect = vi.fn().mockReturnThis()
-      const mockSingle = vi.fn().mockResolvedValue({ data: null, error: null })
-      const mockInsert = vi.fn().mockReturnThis()
-      const mockEq = vi.fn().mockReturnThis()
-
       mockFrom.mockImplementation((table: string) => {
         if (table === 'organizations') {
           return {
-            select: mockSelect,
+            // slug重複チェック用
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({ data: null, error: null }),
+              }),
+            }),
+            // 組織作成用
             insert: vi.fn().mockReturnValue({
               select: vi.fn().mockReturnValue({
                 single: vi.fn().mockResolvedValue({
@@ -88,7 +89,6 @@ describe('Organization Server Actions', () => {
                 }),
               }),
             }),
-            eq: mockEq,
           }
         }
         if (table === 'organization_members') {
@@ -101,11 +101,7 @@ describe('Organization Server Actions', () => {
             insert: vi.fn().mockResolvedValue({ error: null }),
           }
         }
-        return {
-          select: mockSelect,
-          eq: mockEq,
-          single: mockSingle,
-        }
+        return {}
       })
 
       const result = await createOrganization({
@@ -170,9 +166,13 @@ describe('Organization Server Actions', () => {
       mockFrom.mockImplementation((table: string) => {
         if (table === 'organizations') {
           return {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue({ data: null, error: null }),
+            // slug重複チェック用
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({ data: null, error: null }),
+              }),
+            }),
+            // 組織作成用
             insert: vi.fn().mockReturnValue({
               select: vi.fn().mockReturnValue({
                 single: vi.fn().mockResolvedValue({
