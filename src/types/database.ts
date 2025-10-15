@@ -46,6 +46,10 @@ export interface Profile {
   full_name: string | null
   avatar_url: string | null
 
+  // B2B企業向けフィールド
+  company_name: string | null // 会社名
+  name: string | null // 担当者名（サインアップ時に入力）
+
   // メタデータ
   metadata: Record<string, any>
 

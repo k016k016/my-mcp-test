@@ -16,6 +16,7 @@ import { rateLimitLogin, rateLimitPasswordReset } from '@/lib/rate-limit'
 
 /**
  * メールアドレスとパスワードでサインアップ
+ * B2B企業向け: 会社名と担当者名も必須
  */
 export async function signUp(formData: FormData) {
   try {
@@ -25,7 +26,7 @@ export async function signUp(formData: FormData) {
       return { error: validation.error }
     }
 
-    const { email, password } = validation.data
+    const { email, password, companyName, contactName } = validation.data
 
     // レート制限チェック（サインアップは緩めに設定：10回/時間）
     const rateLimit = await rateLimitLogin(email)
@@ -41,6 +42,10 @@ export async function signUp(formData: FormData) {
       password,
       options: {
         emailRedirectTo: `${env.NEXT_PUBLIC_WWW_URL}/auth/callback`,
+        data: {
+          company_name: companyName,
+          name: contactName,
+        },
       },
     })
 
@@ -53,6 +58,23 @@ export async function signUp(formData: FormData) {
       }
 
       return { error: 'サインアップに失敗しました。もう一度お試しください。' }
+    }
+
+    // プロフィールテーブルに会社名と担当者名を保存
+    // トリガーでprofilesテーブルは自動作成されるが、company_nameとnameは手動で更新が必要
+    if (data.user) {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          company_name: companyName,
+          name: contactName,
+        })
+        .eq('id', data.user.id)
+
+      if (profileError) {
+        console.error('[signUp] Profile update error:', profileError)
+        // プロフィール更新エラーは致命的ではないため、警告のみ
+      }
     }
 
     revalidatePath('/', 'layout')

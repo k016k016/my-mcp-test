@@ -26,13 +26,34 @@ export const passwordSchema = z
   .min(6, 'パスワードは6文字以上必要です')
 
 /**
+ * 会社名のバリデーション
+ */
+export const companyNameSchema = z
+  .string()
+  .min(1, '会社名を入力してください')
+  .max(100, '会社名は100文字以下である必要があります')
+  .trim()
+
+/**
+ * 担当者名のバリデーション
+ */
+export const contactNameSchema = z
+  .string()
+  .min(1, '担当者名を入力してください')
+  .max(100, '担当者名は100文字以下である必要があります')
+  .trim()
+
+/**
  * サインアップのバリデーション
+ * B2B企業向け: 会社名と担当者名を必須とする
  */
 export const signUpSchema = z
   .object({
     email: emailSchema,
     password: passwordSchema,
     confirmPassword: z.string().min(1, 'パスワード（確認）を入力してください'),
+    companyName: companyNameSchema,
+    contactName: contactNameSchema,
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'パスワードが一致しません',

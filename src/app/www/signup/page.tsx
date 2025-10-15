@@ -57,6 +57,36 @@ export default function SignUpPage() {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
+              <label htmlFor="companyName" className="sr-only">
+                会社名
+              </label>
+              <input
+                id="companyName"
+                name="companyName"
+                type="text"
+                autoComplete="organization"
+                required
+                maxLength={100}
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                placeholder="会社名"
+              />
+            </div>
+            <div>
+              <label htmlFor="contactName" className="sr-only">
+                担当者名
+              </label>
+              <input
+                id="contactName"
+                name="contactName"
+                type="text"
+                autoComplete="name"
+                required
+                maxLength={100}
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                placeholder="担当者名"
+              />
+            </div>
+            <div>
               <label htmlFor="email-address" className="sr-only">
                 メールアドレス
               </label>
@@ -66,7 +96,7 @@ export default function SignUpPage() {
                 type="email"
                 autoComplete="email"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                 placeholder="メールアドレス"
               />
             </div>
