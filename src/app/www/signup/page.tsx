@@ -1,8 +1,35 @@
 // サインアップページ（WWWドメイン）
+'use client'
+
 import { signUp, signInWithGoogle } from '@/app/actions/auth'
 import Link from 'next/link'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 export default function SignUpPage() {
+  const router = useRouter()
+  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setError(null)
+    setIsLoading(true)
+
+    const formData = new FormData(e.currentTarget)
+    const result = await signUp(formData)
+
+    if (result?.error) {
+      setError(result.error)
+      setIsLoading(false)
+    } else if (result?.success) {
+      // サインアップ成功 - オンボーディングページへ
+      window.location.href = '/onboarding/create-organization'
+    } else {
+      setError('予期しないエラーが発生しました')
+      setIsLoading(false)
+    }
+  }
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
@@ -19,8 +46,15 @@ export default function SignUpPage() {
           </p>
         </div>
 
+        {/* エラーメッセージ */}
+        {error && (
+          <div className="rounded-md bg-red-50 p-4 border border-red-200">
+            <p className="text-sm text-red-800">{error}</p>
+          </div>
+        )}
+
         {/* サインアップフォーム */}
-        <form className="mt-8 space-y-6" action={signUp}>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
               <label htmlFor="email-address" className="sr-only">
@@ -47,8 +81,23 @@ export default function SignUpPage() {
                 autoComplete="new-password"
                 required
                 minLength={6}
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                 placeholder="パスワード（6文字以上）"
+              />
+            </div>
+            <div>
+              <label htmlFor="confirmPassword" className="sr-only">
+                パスワード（確認）
+              </label>
+              <input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                autoComplete="new-password"
+                required
+                minLength={6}
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                placeholder="パスワード（確認）"
               />
             </div>
           </div>
@@ -56,9 +105,10 @@ export default function SignUpPage() {
           <div>
             <button
               type="submit"
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              disabled={isLoading}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              サインアップ
+              {isLoading ? 'サインアップ中...' : 'サインアップ'}
             </button>
           </div>
         </form>

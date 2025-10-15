@@ -2,6 +2,7 @@
 import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import OrganizationSwitcher from '@/components/OrganizationSwitcher'
 import { getCurrentOrganizationId } from '@/lib/organization/current'
 import { signOut } from '@/app/actions/auth'

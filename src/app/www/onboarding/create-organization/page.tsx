@@ -1,12 +1,10 @@
-// 組織作成ページ（APPドメイン - オンボーディング）
+// 組織作成ページ（WWWドメイン - オンボーディング）
 'use client'
 
 import { createOrganization } from '@/app/actions/organization'
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 
 export default function CreateOrganizationPage() {
-  const router = useRouter()
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -35,10 +33,12 @@ export default function CreateOrganizationPage() {
     if (result.error) {
       setError(result.error)
       setIsLoading(false)
+    } else if (result.success) {
+      // 成功時はAPPドメインへリダイレクト
+      window.location.href = process.env.NEXT_PUBLIC_APP_URL || 'http://app.localhost:3000'
     } else {
-      // 成功時はAPPドメインのダッシュボードにリダイレクト
-      router.push('/')
-      router.refresh()
+      setError('予期しないエラーが発生しました')
+      setIsLoading(false)
     }
   }
 
@@ -95,7 +95,7 @@ export default function CreateOrganizationPage() {
                 required
                 value={slug}
                 onChange={(e) => setSlug(e.target.value)}
-                pattern="[a-z0-9-]+"
+                pattern="[a-z0-9\-]+"
                 className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm font-mono"
                 placeholder="例: acme-corp"
               />

@@ -1,16 +1,37 @@
 // WWWドメイン用レイアウト（マーケティングサイト）
 import type { Metadata } from 'next'
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 
 export const metadata: Metadata = {
   title: 'Welcome - Example',
   description: 'マーケティングサイト',
 }
 
-export default function WwwLayout({
+export default async function WwwLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const supabase = await createClient()
+  const headersList = await headers()
+  const pathname = headersList.get('x-invoke-path') || ''
+  const isOnboarding = pathname.includes('/onboarding')
+
+  // オンボーディングページの場合は認証チェックを行う
+  if (isOnboarding) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      redirect('/login')
+    }
+
+    // オンボーディングページはシンプルなレイアウト
+    return <div className="min-h-screen bg-gray-100">{children}</div>
+  }
   return (
     <div className="min-h-screen bg-gray-600">
       {/* ヘッダー */}

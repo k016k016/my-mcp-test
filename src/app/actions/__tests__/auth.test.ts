@@ -16,12 +16,9 @@ const mockSupabase = {
 }
 
 // レート制限のモック
-const mockRateLimitLogin = vi.fn()
-const mockRateLimitPasswordReset = vi.fn()
-
 vi.mock('@/lib/rate-limit', () => ({
-  rateLimitLogin: mockRateLimitLogin,
-  rateLimitPasswordReset: mockRateLimitPasswordReset,
+  rateLimitLogin: vi.fn(),
+  rateLimitPasswordReset: vi.fn(),
 }))
 
 // Next.jsのモック
@@ -34,11 +31,12 @@ vi.mock('@/lib/supabase/server', () => ({
 }))
 
 describe('Auth Actions', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
     // デフォルトでレート制限を通過
-    mockRateLimitLogin.mockResolvedValue({ success: true, current: 1, limit: 5 })
-    mockRateLimitPasswordReset.mockResolvedValue({ success: true, current: 1, limit: 3 })
+    const { rateLimitLogin, rateLimitPasswordReset } = await import('@/lib/rate-limit')
+    vi.mocked(rateLimitLogin).mockResolvedValue({ success: true, current: 1, limit: 5 })
+    vi.mocked(rateLimitPasswordReset).mockResolvedValue({ success: true, current: 1, limit: 3 })
   })
 
   describe('signUp', () => {
@@ -46,6 +44,7 @@ describe('Auth Actions', () => {
       const formData = new FormData()
       formData.append('email', 'test@example.com')
       formData.append('password', 'password123')
+      formData.append('confirmPassword', 'password123')
 
       mockSupabase.auth.signUp.mockResolvedValue({
         data: {
@@ -68,10 +67,11 @@ describe('Auth Actions', () => {
       expect(vi.mocked(nextNavigation.redirect)).toHaveBeenCalledWith('/auth/verify-email')
     })
 
-    it('サインアップが成功し、即座にログインできた場合はホームにリダイレクト', async () => {
+    it('サインアップが成功し、即座にログインできた場合はAPPドメインにリダイレクト', async () => {
       const formData = new FormData()
       formData.append('email', 'test@example.com')
       formData.append('password', 'password123')
+      formData.append('confirmPassword', 'password123')
 
       mockSupabase.auth.signUp.mockResolvedValue({
         data: {
@@ -84,13 +84,29 @@ describe('Auth Actions', () => {
       await signUp(formData)
 
       expect(vi.mocked(nextCache.revalidatePath)).toHaveBeenCalledWith('/', 'layout')
-      expect(vi.mocked(nextNavigation.redirect)).toHaveBeenCalledWith('/')
+      expect(vi.mocked(nextNavigation.redirect)).toHaveBeenCalledWith(process.env.NEXT_PUBLIC_APP_URL)
+    })
+
+    it('パスワードが一致しない場合、エラーメッセージを返す', async () => {
+      const formData = new FormData()
+      formData.append('email', 'test@example.com')
+      formData.append('password', 'password123')
+      formData.append('confirmPassword', 'different123')
+
+      const result = await signUp(formData)
+
+      // バリデーションエラーが返されることを確認
+      expect(result.error).toBeDefined()
+      expect(typeof result.error).toBe('string')
+      expect(mockSupabase.auth.signUp).not.toHaveBeenCalled()
+      expect(vi.mocked(nextNavigation.redirect)).not.toHaveBeenCalled()
     })
 
     it('サインアップに失敗した場合、エラーメッセージを返す', async () => {
       const formData = new FormData()
       formData.append('email', 'test@example.com')
       formData.append('password', 'Password123')
+      formData.append('confirmPassword', 'Password123')
 
       mockSupabase.auth.signUp.mockResolvedValue({
         data: { user: null, session: null },
@@ -105,7 +121,7 @@ describe('Auth Actions', () => {
   })
 
   describe('signIn', () => {
-    it('ログインが成功した場合、ホームにリダイレクト', async () => {
+    it('ログインが成功した場合、APPドメインにリダイレクト', async () => {
       const formData = new FormData()
       formData.append('email', 'test@example.com')
       formData.append('password', 'password123')
@@ -125,7 +141,7 @@ describe('Auth Actions', () => {
         password: 'password123',
       })
       expect(vi.mocked(nextCache.revalidatePath)).toHaveBeenCalledWith('/', 'layout')
-      expect(vi.mocked(nextNavigation.redirect)).toHaveBeenCalledWith('/')
+      expect(vi.mocked(nextNavigation.redirect)).toHaveBeenCalledWith(process.env.NEXT_PUBLIC_APP_URL)
     })
 
     it('ログインに失敗した場合、エラーメッセージを返す', async () => {
@@ -240,7 +256,7 @@ describe('Auth Actions', () => {
   })
 
   describe('updatePassword', () => {
-    it('パスワード更新が成功した場合、ホームにリダイレクト', async () => {
+    it('パスワード更新が成功した場合、APPドメインにリダイレクト', async () => {
       const formData = new FormData()
       formData.append('password', 'newpassword123')
 
@@ -255,7 +271,7 @@ describe('Auth Actions', () => {
         password: 'newpassword123',
       })
       expect(vi.mocked(nextCache.revalidatePath)).toHaveBeenCalledWith('/', 'layout')
-      expect(vi.mocked(nextNavigation.redirect)).toHaveBeenCalledWith('/')
+      expect(vi.mocked(nextNavigation.redirect)).toHaveBeenCalledWith(process.env.NEXT_PUBLIC_APP_URL)
     })
 
     it('パスワード更新に失敗した場合、エラーメッセージを返す', async () => {

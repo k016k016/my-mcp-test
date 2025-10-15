@@ -55,24 +55,17 @@ export async function signUp(formData: FormData) {
       return { error: 'サインアップに失敗しました。もう一度お試しください。' }
     }
 
-    // サインアップ成功
-    // メール確認が必要な場合は、確認待ち画面にリダイレクト
+    revalidatePath('/', 'layout')
+
+    // メール確認が必要な場合
     if (data.user && !data.session) {
-      revalidatePath('/', 'layout')
-      redirect('/auth/verify-email')
+      return { success: true, requiresEmailConfirmation: true }
     }
 
     // 即座にログインできた場合（メール確認不要設定の場合）
-    revalidatePath('/', 'layout')
-    redirect('/')
+    return { success: true, requiresEmailConfirmation: false }
   } catch (error) {
     console.error('[signUp] Unexpected error:', error)
-
-    // redirectはthrowするので、それ以外のエラーのみキャッチ
-    if (error && typeof error === 'object' && 'digest' in error) {
-      throw error
-    }
-
     return { error: '予期しないエラーが発生しました。もう一度お試しください。' }
   }
 }
@@ -118,8 +111,9 @@ export async function signIn(formData: FormData) {
       return { error: 'ログインに失敗しました。もう一度お試しください。' }
     }
 
+    // ログイン成功後、APPドメインにリダイレクト
     revalidatePath('/', 'layout')
-    redirect('/')
+    redirect(env.NEXT_PUBLIC_APP_URL)
   } catch (error) {
     console.error('[signIn] Unexpected error:', error)
 
@@ -257,8 +251,9 @@ export async function updatePassword(formData: FormData) {
       return { error: 'パスワードの更新に失敗しました。もう一度お試しください。' }
     }
 
+    // パスワード更新成功後、APPドメインにリダイレクト
     revalidatePath('/', 'layout')
-    redirect('/')
+    redirect(env.NEXT_PUBLIC_APP_URL)
   } catch (error) {
     console.error('[updatePassword] Unexpected error:', error)
 

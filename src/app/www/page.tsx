@@ -1,4 +1,6 @@
 // WWWドメインのトップページ
+import Link from 'next/link'
+
 export default function WwwPage() {
   return (
     <div className="container mx-auto px-4 py-20">
@@ -10,18 +12,24 @@ export default function WwwPage() {
           マーケティングサイト（www.example.com）
         </p>
         <div className="space-x-4">
-          <a
-            href="http://app.localhost:3000"
+          <Link
+            href="/signup"
             className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700"
           >
-            アプリを開く
-          </a>
-          <a
+            サインアップ
+          </Link>
+          <Link
+            href="/login"
+            className="inline-block border border-blue-600 text-blue-600 px-6 py-3 rounded-lg hover:bg-blue-50"
+          >
+            ログイン
+          </Link>
+          <Link
             href="/pricing"
             className="inline-block border border-gray-300 px-6 py-3 rounded-lg hover:bg-gray-50"
           >
             料金を見る
-          </a>
+          </Link>
         </div>
       </div>
 

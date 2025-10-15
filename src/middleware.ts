@@ -7,11 +7,9 @@ export async function middleware(request: NextRequest) {
   const host = request.headers.get('host') || ''
   const domain = getDomainFromHost(host)
 
-  // 未知のサブドメインの場合は404エラーページにリダイレクト
+  // 未知のサブドメインの場合は404エラーを返す
   if (domain === null) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/404'
-    return NextResponse.rewrite(url)
+    return new NextResponse('Not Found: Unknown subdomain', { status: 404 })
   }
 
   const domainConfig = getDomainConfig(domain)
@@ -72,6 +70,8 @@ export async function middleware(request: NextRequest) {
 
   // カスタムヘッダーでドメイン情報を追加
   response.headers.set('x-domain', domain)
+  // 元のパス情報を追加（レイアウトでパス判定に使用）
+  response.headers.set('x-invoke-path', request.nextUrl.pathname)
 
   return response
 }

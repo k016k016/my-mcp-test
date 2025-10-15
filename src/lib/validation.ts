@@ -28,10 +28,16 @@ export const passwordSchema = z
 /**
  * サインアップのバリデーション
  */
-export const signUpSchema = z.object({
-  email: emailSchema,
-  password: passwordSchema,
-})
+export const signUpSchema = z
+  .object({
+    email: emailSchema,
+    password: passwordSchema,
+    confirmPassword: z.string().min(1, 'パスワード（確認）を入力してください'),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'パスワードが一致しません',
+    path: ['confirmPassword'],
+  })
 
 /**
  * ログインのバリデーション
@@ -193,8 +199,9 @@ export function validateFormData<T extends z.ZodTypeAny>(
     return { success: true, data: validatedData }
   } catch (error) {
     if (error instanceof z.ZodError && error.errors && error.errors.length > 0) {
-      const firstError = error.errors[0]
-      return { success: false, error: firstError.message }
+      // 最後のエラー（refineエラーなど）を優先的に返す
+      const lastError = error.errors[error.errors.length - 1]
+      return { success: false, error: lastError.message }
     }
     return { success: false, error: '入力データの検証に失敗しました' }
   }
@@ -213,6 +220,7 @@ export function validateData<T extends z.ZodTypeAny>(
   } catch (error) {
     if (error instanceof z.ZodError && error.errors && error.errors.length > 0) {
       const firstError = error.errors[0]
+      console.error('[validateData] Validation error details:', error.errors)
       return { success: false, error: firstError.message }
     }
     return { success: false, error: 'データの検証に失敗しました' }
