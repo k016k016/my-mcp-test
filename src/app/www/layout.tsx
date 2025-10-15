@@ -32,6 +32,8 @@ export default async function WwwLayout({
     // オンボーディングページはシンプルなレイアウト
     return <div className="min-h-screen bg-gray-100">{children}</div>
   }
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://app.localhost:3000'
+
   return (
     <div className="min-h-screen bg-gray-600">
       {/* ヘッダー */}
@@ -49,7 +51,7 @@ export default async function WwwLayout({
               <a href="/pricing" className="hover:underline">
                 料金
               </a>
-              <a href="http://app.localhost:3000" className="hover:underline">
+              <a href={appUrl} className="hover:underline">
                 ログイン
               </a>
             </div>

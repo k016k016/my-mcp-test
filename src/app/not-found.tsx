@@ -1,5 +1,7 @@
 // グローバル404ページ
 export default function NotFound() {
+  const wwwUrl = process.env.NEXT_PUBLIC_WWW_URL || 'http://localhost:3000'
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="text-center">
@@ -12,7 +14,7 @@ export default function NotFound() {
         </p>
         <div className="space-x-4">
           <a
-            href="http://localhost:3000"
+            href={wwwUrl}
             className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700"
           >
             ホームに戻る
