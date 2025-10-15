@@ -6,9 +6,11 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { setCurrentOrganizationId } from '@/lib/organization/current'
-import type { CreateOrganizationInput, UpdateOrganizationInput } from '@/types/database'
+import { createMockLicense } from '@/lib/licenses/helpers'
+import type { CreateOrganizationInput, UpdateOrganizationInput, LicensePlanType } from '@/types/database'
 import {
   validateData,
+  validateFormData,
   createOrganizationSchema,
   updateOrganizationSchema,
   uuidSchema,
@@ -29,16 +31,28 @@ async function getRequestInfo() {
 
 /**
  * 組織を作成し、作成者をオーナーとして追加
+ * B2B: FormDataを受け取り、planIdがあればライセンスも作成
  */
-export async function createOrganization(input: CreateOrganizationInput) {
+export async function createOrganization(input: CreateOrganizationInput | FormData) {
   try {
-    // 入力バリデーション
-    const validation = validateData(createOrganizationSchema, input)
-    if (!validation.success) {
-      return { error: validation.error }
-    }
+    let validatedData: { name: string; slug: string }
+    let planId: LicensePlanType | null = null
 
-    const validatedData = validation.data
+    // FormDataの場合とオブジェクトの場合を判定
+    if (input instanceof FormData) {
+      const validation = validateFormData(createOrganizationSchema, input)
+      if (!validation.success) {
+        return { error: validation.error }
+      }
+      validatedData = validation.data
+      planId = input.get('planId') as LicensePlanType | null
+    } else {
+      const validation = validateData(createOrganizationSchema, input)
+      if (!validation.success) {
+        return { error: validation.error }
+      }
+      validatedData = validation.data
+    }
 
     const supabase = await createClient()
 
@@ -95,6 +109,15 @@ export async function createOrganization(input: CreateOrganizationInput) {
       return { error: 'メンバーの追加に失敗しました。もう一度お試しください。' }
     }
 
+    // B2B: プランIDがある場合はライセンスを作成（モック）
+    if (planId) {
+      const license = await createMockLicense(organization.id, planId)
+      if (!license) {
+        console.error('[createOrganization] Failed to create license')
+        // ライセンス作成失敗は警告のみ（組織自体は作成済み）
+      }
+    }
+
     // 監査ログを記録
     const { ipAddress, userAgent } = await getRequestInfo()
     await supabase.from('audit_logs').insert({
@@ -103,7 +126,7 @@ export async function createOrganization(input: CreateOrganizationInput) {
       action: 'organization.created',
       resource_type: 'organization',
       resource_id: organization.id,
-      details: { name: organization.name, slug: organization.slug },
+      details: { name: organization.name, slug: organization.slug, planId },
       ip_address: ipAddress,
       user_agent: userAgent,
     })

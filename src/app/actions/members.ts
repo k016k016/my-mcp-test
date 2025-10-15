@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { sendEmail } from '@/lib/resend/operations'
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
+import { hasAvailableSeats, getOrganizationLicense } from '@/lib/licenses/helpers'
 import type { OrganizationRole } from '@/types/database'
 import { env } from '@/lib/env'
 import {
@@ -70,6 +71,18 @@ export async function inviteMember(organizationId: string, email: string, role: 
 
     if (!member || (member.role !== 'owner' && member.role !== 'admin')) {
       return { error: 'メンバーを招待する権限がありません' }
+    }
+
+    // B2B: ライセンスの空きをチェック
+    const license = await getOrganizationLicense(organizationId)
+    if (license) {
+      // ライセンスがある場合は、used_seats < total_seatsをチェック
+      const hasSeats = await hasAvailableSeats(organizationId)
+      if (!hasSeats) {
+        return {
+          error: `利用可能なシート数を超えています（${license.used_seats}/${license.total_seats}使用中）。追加シートを購入するか、既存メンバーを削除してください。`,
+        }
+      }
     }
 
     // 既に招待済みかチェック

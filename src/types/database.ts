@@ -138,6 +138,33 @@ export interface UsageTracking {
   updated_at: string
 }
 
+export interface OrganizationLicense {
+  id: string
+  organization_id: string
+
+  // プラン情報
+  plan_type: LicensePlanType
+  total_seats: number
+  used_seats: number
+
+  // 決済プロバイダー情報
+  stripe_customer_id: string | null
+  stripe_subscription_id: string | null
+  chargebee_customer_id: string | null
+  chargebee_subscription_id: string | null
+
+  // 契約期間
+  contract_start: string
+  contract_end: string | null
+
+  // ステータス
+  is_active: boolean
+
+  // タイムスタンプ
+  created_at: string
+  updated_at: string
+}
+
 // ============================================================================
 // JOIN型（関連データを含む）
 // ============================================================================

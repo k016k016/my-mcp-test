@@ -2,13 +2,40 @@
 'use client'
 
 import { createOrganization } from '@/app/actions/organization'
-import { useState } from 'react'
+import { getPlanById } from '@/lib/plans/config'
+import { useSearchParams } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import type { LicensePlanType } from '@/types/database'
 
-export default function CreateOrganizationPage() {
+function CreateOrganizationContent() {
+  const searchParams = useSearchParams()
+  const planId = searchParams.get('plan') as LicensePlanType | null
+
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+
+  // プラン情報を取得
+  const plan = planId ? getPlanById(planId) : null
+
+  // 会社名をprofilesから取得して自動入力
+  useEffect(() => {
+    async function loadCompanyName() {
+      try {
+        const response = await fetch('/api/profile')
+        if (response.ok) {
+          const profile = await response.json()
+          if (profile.company_name) {
+            handleNameChange(profile.company_name)
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load company name:', err)
+      }
+    }
+    loadCompanyName()
+  }, [])
 
   // 組織名からslugを自動生成
   function handleNameChange(value: string) {
@@ -28,7 +55,15 @@ export default function CreateOrganizationPage() {
     setError(null)
     setIsLoading(true)
 
-    const result = await createOrganization({ name, slug })
+    // プランIDを含めて組織を作成
+    const formData = new FormData()
+    formData.append('name', name)
+    formData.append('slug', slug)
+    if (planId) {
+      formData.append('planId', planId)
+    }
+
+    const result = await createOrganization(formData)
 
     if (result.error) {
       setError(result.error)
@@ -116,15 +151,40 @@ export default function CreateOrganizationPage() {
           </div>
         </form>
 
-        {/* トライアル情報 */}
-        <div className="mt-4 bg-blue-50 border border-blue-200 rounded-md p-4">
-          <p className="text-sm text-blue-800">
-            🎉 14日間の無料トライアル付き
-            <br />
-            トライアル期間中は全ての機能を無料でお試しいただけます。
-          </p>
-        </div>
+        {/* ライセンス情報 */}
+        {plan && (
+          <div className="mt-4 bg-green-50 border border-green-200 rounded-md p-4">
+            <h3 className="text-sm font-semibold text-green-900 mb-2">
+              ライセンス情報
+            </h3>
+            <div className="space-y-1 text-sm text-green-800">
+              <p>
+                <strong>プラン:</strong> {plan.name}
+              </p>
+              <p>
+                <strong>シート数:</strong> {plan.seats}
+              </p>
+              <p>
+                <strong>使用中:</strong> 1/{plan.seats}（あなた）
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
+  )
+}
+
+export default function CreateOrganizationPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gray-100">
+          <p className="text-gray-600">読み込み中...</p>
+        </div>
+      }
+    >
+      <CreateOrganizationContent />
+    </Suspense>
   )
 }
