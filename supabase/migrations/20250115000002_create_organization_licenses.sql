@@ -4,7 +4,7 @@
 
 -- organization_licensesテーブルを作成
 CREATE TABLE IF NOT EXISTS public.organization_licenses (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE UNIQUE,
 
   -- プラン情報
