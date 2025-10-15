@@ -11,6 +11,9 @@ export type SubscriptionStatus = 'active' | 'trialing' | 'past_due' | 'canceled'
 
 export type SubscriptionPlan = 'free' | 'pro' | 'enterprise'
 
+// B2B企業向けプランタイプ（organization_licensesで使用）
+export type LicensePlanType = 'starter' | 'business' | 'pro' | 'enterprise'
+
 export type InvitationStatus = 'pending' | 'accepted' | 'expired'
 
 // ============================================================================

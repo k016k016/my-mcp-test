@@ -23,8 +23,8 @@ export default function SignUpPage() {
       setError(result.error)
       setIsLoading(false)
     } else if (result?.success) {
-      // サインアップ成功 - オンボーディングページへ
-      window.location.href = '/onboarding/create-organization'
+      // サインアップ成功 - プラン選択ページへ（B2Bフロー）
+      window.location.href = '/onboarding/select-plan'
     } else {
       setError('予期しないエラーが発生しました')
       setIsLoading(false)
