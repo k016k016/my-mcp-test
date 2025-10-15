@@ -68,6 +68,11 @@ export function getDomainFromHost(host: string): DomainType | null {
     return DOMAINS.WWW
   }
 
+  // Vercelのデフォルトドメイン（*.vercel.app）をWWWとして扱う
+  if (hostname.endsWith('.vercel.app')) {
+    return DOMAINS.WWW
+  }
+
   // ドメイン部分のみの場合（example.com）もWWWとして扱う
   const parts = hostname.split('.')
   if (parts.length === 2) {
