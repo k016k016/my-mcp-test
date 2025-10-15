@@ -1,14 +1,6 @@
 {
   "buildCommand": "npm run build",
-  "devCommand": "npm run dev",
-  "installCommand": "npm install",
+  "outputDirectory": ".next",
   "framework": "nextjs",
-  "regions": ["hnd1"],
-  "git": {
-    "deploymentEnabled": true
-  },
-  "github": {
-    "enabled": true,
-    "autoAlias": true
-  }
+  "installCommand": "npm install"
 }
