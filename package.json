@@ -4,9 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "dev:staging": "env-cmd -f .env.staging next dev --turbopack",
+    "dev:preview": "env-cmd -f .env.preview next dev --turbopack",
     "build": "next build",
-    "build:staging": "env-cmd -f .env.staging next build",
+    "build:preview": "env-cmd -f .env.preview next build",
     "build:production": "env-cmd -f .env.production next build",
     "start": "next start",
     "lint": "eslint",
@@ -17,7 +17,7 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
     "env:dev": "cp .env.development .env.local && echo '✅ 開発環境に切り替えました'",
-    "env:staging": "cp .env.staging .env.local && echo '✅ ステージング環境に切り替えました'",
+    "env:preview": "cp .env.preview .env.local && echo '✅ Preview環境に切り替えました'",
     "env:production": "cp .env.production .env.local && echo '✅ 本番環境に切り替えました (注意して使用してください)'"
   },
   "dependencies": {

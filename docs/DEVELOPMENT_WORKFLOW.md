@@ -104,7 +104,7 @@ npm run dev
 ```
 
 ### Preview環境（Vercel）
-- `.env.staging`の内容を参考に、Vercelダッシュボードで設定
+- `.env.preview`の内容を参考に、Vercelダッシュボードで設定
 - または`vercel env`コマンドで設定
 
 ### Production環境（Vercel）
