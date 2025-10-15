@@ -13,16 +13,25 @@ const nextConfig: NextConfig = {
   },
 };
 
-// Sentryの設定でNext.js設定をラップ
-export default withSentryConfig(nextConfig, {
-  // Sentryのビルド時設定
-  org: process.env.SENTRY_ORG,
-  project: process.env.SENTRY_PROJECT,
+// Sentry設定が有効な場合のみwithSentryConfigを適用
+const sentryOrg = process.env.SENTRY_ORG;
+const sentryProject = process.env.SENTRY_PROJECT;
+const isSentryConfigured = sentryOrg && sentryProject &&
+  sentryOrg !== 'your-org-slug' &&
+  sentryProject !== 'your-project-name';
 
-  // Sentryプラグインのオプション
-  silent: !process.env.CI,
-  widenClientFileUpload: true,
-  hideSourceMaps: true,
-  disableLogger: true,
-  automaticVercelMonitors: true,
-});
+// Sentryが正しく設定されている場合のみSentryの設定を適用
+export default isSentryConfigured
+  ? withSentryConfig(nextConfig, {
+      // Sentryのビルド時設定
+      org: sentryOrg,
+      project: sentryProject,
+
+      // Sentryプラグインのオプション
+      silent: !process.env.CI,
+      widenClientFileUpload: true,
+      hideSourceMaps: true,
+      disableLogger: true,
+      automaticVercelMonitors: true,
+    })
+  : nextConfig;
