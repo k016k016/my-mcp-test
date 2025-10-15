@@ -18,8 +18,21 @@ export async function updateSession(request: NextRequest) {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
+            // サブドメイン間でCookieを共有するための設定
+            const cookieOptions = { ...options }
+
+            // 開発環境: localhost間でCookie共有
+            if (process.env.NODE_ENV === 'development') {
+              cookieOptions.domain = '.localhost'
+            }
+            // 本番環境でカスタムドメインを使用する場合
+            else if (process.env.NEXT_PUBLIC_COOKIE_DOMAIN) {
+              cookieOptions.domain = process.env.NEXT_PUBLIC_COOKIE_DOMAIN
+            }
+            // それ以外（Vercelデフォルトドメイン等）: Supabaseのデフォルト設定を使用
+
             request.cookies.set(name, value)
-            supabaseResponse.cookies.set(name, value, options)
+            supabaseResponse.cookies.set(name, value, cookieOptions)
           })
         },
       },
