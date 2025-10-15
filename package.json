@@ -5,9 +5,9 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "dev:staging": "env-cmd -f .env.staging next dev --turbopack",
-    "build": "next build --turbopack",
-    "build:staging": "env-cmd -f .env.staging next build --turbopack",
-    "build:production": "env-cmd -f .env.production next build --turbopack",
+    "build": "next build",
+    "build:staging": "env-cmd -f .env.staging next build",
+    "build:production": "env-cmd -f .env.production next build",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest",
