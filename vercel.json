@@ -6,5 +6,9 @@
   "regions": ["hnd1"],
   "git": {
     "deploymentEnabled": true
+  },
+  "github": {
+    "enabled": true,
+    "autoAlias": true
   }
 }
