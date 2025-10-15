@@ -9,7 +9,7 @@ export default function WwwPage() {
           Welcome to My MCP Test 🚀
         </h1>
         <p className="text-xl text-gray-600 mb-8">
-          マーケティングサイト（www.example.com）
+          マーケティングサイト - Preview環境テスト
         </p>
         <div className="space-x-4">
           <Link
