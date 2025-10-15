@@ -26,6 +26,8 @@ cp .env.development .env.test
 
 ### 2. E2Eテストの実行
 
+#### localhost環境でのテスト
+
 ```bash
 # すべてのテストを実行（ヘッドレスモード）
 npm run test:e2e
@@ -38,11 +40,29 @@ npm run test:e2e:headed
 
 # 特定のテストファイルのみ実行
 npx playwright test e2e/auth.spec.ts
+npx playwright test e2e/localhost.spec.ts
 
 # 特定のブラウザで実行
 npx playwright test --project=chromium
 npx playwright test --project=firefox
 npx playwright test --project=webkit
+```
+
+#### Preview環境（cocktailorder.com）でのテスト
+
+```bash
+# Preview環境でテスト実行
+npm run test:e2e:preview
+
+# Preview環境で特定のテストのみ実行
+PLAYWRIGHT_BASE_URL=https://www.cocktailorder.com npx playwright test e2e/vercel-preview.spec.ts
+```
+
+#### 本番環境でのテスト
+
+```bash
+# 本番環境でテスト実行（本番ドメイン設定後）
+npm run test:e2e:production
 ```
 
 ### 3. テスト結果の確認
@@ -82,27 +102,74 @@ npx playwright show-report
 - **OPSドメイン**: 運用画面へのアクセス
 - **未知のサブドメイン**: 404エラーの確認
 
+### 5. localhost環境テスト (`e2e/localhost.spec.ts`) ✨ 新規追加
+
+- **WWWドメイン表示**: `http://localhost:3000`
+- **APPサブドメインアクセス**: `http://app.localhost:3000`
+- **ADMINサブドメインアクセス**: `http://admin.localhost:3000`
+- **OPSサブドメインアクセス**: `http://ops.localhost:3000`
+- **サブドメイン間のCookie共有テスト**: `.localhost` ドメインでのCookie共有を検証
+
+### 6. Preview環境テスト (`e2e/vercel-preview.spec.ts`) ✨ 新規追加
+
+- **WWWドメイン表示**: `https://www.cocktailorder.com`
+- **APPサブドメインアクセス**: `https://app.cocktailorder.com`
+- **ADMINサブドメインアクセス**: `https://admin.cocktailorder.com`
+- **OPSサブドメインアクセス**: `https://ops.cocktailorder.com`
+- **サブドメイン間のCookie共有テスト**: `.cocktailorder.com` ドメインでのCookie共有を検証
+
 ## ⚙️ テスト設定
 
 ### playwright.config.ts
 
 ```typescript
+// 環境変数からbaseURLを取得（デフォルトはlocalhost）
+const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000'
+
 export default defineConfig({
   testDir: './e2e',           // テストディレクトリ
   fullyParallel: true,        // 並列実行
   retries: process.env.CI ? 2 : 0,  // CI環境でリトライ
 
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL,                  // 環境変数で切り替え可能
     trace: 'on-first-retry',  // 失敗時にトレース保存
   },
 
-  webServer: {
-    command: 'npm run dev',   // テスト前に開発サーバー起動
-    url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
-  },
+  // ローカル環境でのみwebServerを起動（Vercelテスト時は不要）
+  webServer: process.env.PLAYWRIGHT_BASE_URL
+    ? undefined
+    : {
+        command: 'npm run dev',   // テスト前に開発サーバー起動
+        url: 'http://localhost:3000',
+        reuseExistingServer: !process.env.CI,
+      },
 })
+```
+
+### 環境別のテスト実行
+
+#### localhost環境
+```bash
+# 環境変数なし、または明示的に指定
+npm run test:e2e
+# または
+PLAYWRIGHT_BASE_URL=http://localhost:3000 npx playwright test
+```
+
+#### Preview環境（cocktailorder.com）
+```bash
+# package.jsonのコマンドを使用
+npm run test:e2e:preview
+# または環境変数で指定
+PLAYWRIGHT_BASE_URL=https://www.cocktailorder.com npx playwright test
+```
+
+#### 本番環境
+```bash
+npm run test:e2e:production
+# または環境変数で指定
+PLAYWRIGHT_BASE_URL=https://your-production-domain.com npx playwright test
 ```
 
 ## 🔧 テストのカスタマイズ

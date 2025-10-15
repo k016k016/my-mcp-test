@@ -1,6 +1,6 @@
 # プロジェクト進捗状況
 
-最終更新: 2025-01-12
+最終更新: 2025-10-15
 
 ## 📋 プロジェクト概要
 
@@ -400,3 +400,120 @@ http://ops.localhost:3000      # OPS
    - 4つのドメインをデプロイ先に向ける
 5. **OPS用IP制限の設定**
    - `OPS_ALLOWED_IPS` 環境変数を設定
+
+
+---
+
+## ✅ 2025-10-15 更新: デプロイとテスト環境の整備
+
+### 1. Vercel自動デプロイの設定 ✅
+- ✅ GitHub-Vercel連携の修正
+  - GitHubリポジトリとVercelプロジェクトを削除・再作成
+  - 自動デプロイが正常に動作するようになった
+- ✅ 2環境構成の実装
+  - **develop** ブランチ → Vercel Preview環境
+  - **main** ブランチ → Vercel Production環境
+- ✅ 環境変数の整理
+  - `staging` → `preview` にリネーム（Vercel用語に統一）
+  - 開発・Preview・本番の3環境を明確に分離
+
+### 2. カスタムドメイン設定 ✅
+- ✅ Preview環境用ドメイン設定
+  - **cocktailorder.com** をPreview環境に設定
+  - お名前.com でDNS設定（Vercel nameservers使用）
+  - 全サブドメイン対応（www/app/admin/ops）
+- ✅ Cookie共有の修正
+  - **重要**: サブドメイン間でのSupabase認証Cookie共有を実装
+  - localhost環境: `.localhost` ドメインでCookie共有
+  - Preview/本番環境: `.cocktailorder.com` 等でCookie共有
+  - 修正ファイル:
+    - `src/lib/supabase/server.ts`
+    - `src/lib/supabase/middleware.ts`
+    - `src/lib/supabase/client.ts`
+
+### 3. E2Eテスト環境の整備 ✅
+- ✅ Playwright E2Eテスト設定
+  - `playwright.config.ts`: 環境変数でbaseURLを切り替え
+  - localhost環境用テスト: `e2e/localhost.spec.ts`
+  - Preview環境用テスト: `e2e/vercel-preview.spec.ts`
+- ✅ テストコマンド追加
+  - `npm run test:e2e` - localhost環境でテスト
+  - `npm run test:e2e:ui` - Playwright UIでテスト
+  - `npm run test:e2e:headed` - ブラウザ表示してテスト
+  - `npm run test:e2e:preview` - Preview環境でテスト
+- ✅ Cookie共有テスト
+  - サブドメイン間でのCookie共有を自動テストで検証
+  - localhost/Previewの両環境でテスト成功
+
+### 4. Supabaseデータ管理ツール ✅
+- ✅ データクリアスクリプト作成
+  - `supabase/scripts/clear-all-data.sql`
+  - 全テーブルのデータを正しい順序で削除
+  - 外部キー制約を考慮した削除順序
+- ✅ データクリアコマンド追加
+  - `npm run supabase:clear` - SQLファイルを開く
+- ✅ データ管理ドキュメント作成
+  - `docs/SUPABASE_DATA_MANAGEMENT.md`
+  - 3つのクリア方法を説明
+  - 使用例と注意事項を記載
+
+### 5. ドキュメント整備 ✅
+- ✅ 開発ワークフロー文書化
+  - `docs/DEVELOPMENT_WORKFLOW.md` を作成
+  - 2環境構成（develop→Preview、main→Production）
+  - 日常的な開発フロー
+  - トラブルシューティング
+- ✅ 環境設定ドキュメント更新
+  - `docs/ENVIRONMENT_SETUP.md`
+  - staging→previewにリネーム
+  - 環境変数の説明を追加
+
+### 実装の詳細
+
+#### Cookie共有設定
+```typescript
+// server.ts, middleware.ts, client.ts
+const cookieOptions = {
+  ...options,
+  domain: process.env.NODE_ENV === 'development'
+    ? '.localhost'
+    : process.env.NEXT_PUBLIC_COOKIE_DOMAIN
+}
+```
+
+環境変数:
+```bash
+# .env.development
+# Cookie設定（自動的に .localhost が設定される）
+
+# .env.preview
+NEXT_PUBLIC_COOKIE_DOMAIN=.cocktailorder.com
+
+# .env.production
+NEXT_PUBLIC_COOKIE_DOMAIN=.your-production-domain.com
+```
+
+#### E2Eテスト構成
+```typescript
+// playwright.config.ts
+const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000'
+
+// localhost環境とPreview環境で同じテストを実行可能
+```
+
+### 次のステップ
+
+1. **認証フローの手動テスト**
+   - localhost環境でサインアップ→組織作成→ログインフローをテスト
+   - Cookie共有が実際の認証で動作するか確認
+   - サブドメイン間（www/app/admin/ops）での認証維持を確認
+
+2. **Preview環境での動作確認**
+   - cocktailorder.com で同じフローをテスト
+   - 本番環境相当の設定で問題ないか確認
+
+3. **本番環境の準備**
+   - 本番ドメインの設定
+   - 本番用環境変数の設定
+   - 本番用Supabaseプロジェクトの準備
+

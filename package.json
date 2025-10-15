@@ -20,7 +20,8 @@
     "test:e2e:production": "PLAYWRIGHT_BASE_URL=https://your-production-domain.com playwright test",
     "env:dev": "cp .env.development .env.local && echo '✅ 開発環境に切り替えました'",
     "env:preview": "cp .env.preview .env.local && echo '✅ Preview環境に切り替えました'",
-    "env:production": "cp .env.production .env.local && echo '✅ 本番環境に切り替えました (注意して使用してください)'"
+    "env:production": "cp .env.production .env.local && echo '✅ 本番環境に切り替えました (注意して使用してください)'",
+    "supabase:clear": "echo '⚠️  警告: Supabaseの全データを削除します' && echo 'ファイルをSupabase SQL Editorで実行してください: supabase/scripts/clear-all-data.sql' && open supabase/scripts/clear-all-data.sql"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.908.0",
