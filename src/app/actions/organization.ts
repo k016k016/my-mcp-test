@@ -337,7 +337,7 @@ export async function deleteOrganization(organizationId: string) {
 }
 
 /**
- * 組織を切り替え
+ * 組織を切り替え（権限に応じて適切な画面にリダイレクト）
  */
 export async function switchOrganization(organizationId: string) {
   try {
@@ -359,10 +359,10 @@ export async function switchOrganization(organizationId: string) {
       return { error: '認証が必要です' }
     }
 
-    // ユーザーが組織のメンバーかチェック
+    // ユーザーが組織のメンバーかチェック（ロールも取得）
     const { data: member } = await supabase
       .from('organization_members')
-      .select('id')
+      .select('id, role')
       .eq('organization_id', organizationId)
       .eq('user_id', user.id)
       .single()
@@ -374,10 +374,28 @@ export async function switchOrganization(organizationId: string) {
     // 現在の組織を設定
     await setCurrentOrganizationId(organizationId)
 
+    // 権限に応じてリダイレクト先を決定
+    const isAdmin = member.role === 'owner' || member.role === 'admin'
+    const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL || 'http://admin.localhost:3000'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://app.localhost:3000'
+
     revalidatePath('/', 'layout')
-    return { success: true }
+
+    if (isAdmin) {
+      // 管理者権限がある場合はADMIN画面へ
+      redirect(adminUrl)
+    } else {
+      // 一般メンバーの場合はAPP画面へ
+      redirect(appUrl)
+    }
   } catch (error) {
     console.error('[switchOrganization] Unexpected error:', error)
+
+    // redirectはthrowするので、それ以外のエラーのみキャッチ
+    if (error && typeof error === 'object' && 'digest' in error) {
+      throw error
+    }
+
     return { error: '予期しないエラーが発生しました。もう一度お試しください。' }
   }
 }

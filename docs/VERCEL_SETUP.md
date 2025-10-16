@@ -6,8 +6,23 @@
 
 - Vercelアカウント（https://vercel.com）
 - Vercel CLI（グローバルにインストール済み）
+- **Node.js 22.12.0以上**（Vercelでサポートされている最新LTS）
 - Supabaseプロジェクトが設定済み
 - `.env.local`ファイルが正しく設定されている
+
+## Node.jsバージョン設定
+
+このプロジェクトは**Node.js 22.12.0以上**を要求します。以下のファイルでバージョンが管理されています：
+
+- `package.json` - `engines.node: ">=22.12.0"`
+- `.nvmrc` - ローカル開発環境用
+- `.node-version` - 一部ツール用
+
+ローカル開発でnvmを使用している場合：
+```bash
+nvm install 22.12.0
+nvm use 22.12.0
+```
 
 ## セットアップ手順
 

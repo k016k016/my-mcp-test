@@ -6,6 +6,13 @@
 
 これは、Next.js 15、TypeScript、Supabaseで構築された、本番環境対応の**マルチテナントSaaSボイラープレート**です。PostgreSQL Row Level Security (RLS) を使用した完全なテナント分離を実装し、複数のドメインで異なるユーザーインターフェースをサポートしています。
 
+## システム要件
+
+- **Node.js**: 22.12.0以上（Vercel対応の最新LTS）
+  - ローカル開発では`.nvmrc`で管理
+  - Vercelデプロイでは`package.json`の`engines`フィールドで指定
+- **npm**: 10.x以上
+
 ## コアアーキテクチャ
 
 ### マルチドメインシステム

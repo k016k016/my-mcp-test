@@ -12,6 +12,7 @@ const mockSupabase = {
     signInWithOAuth: vi.fn(),
     resetPasswordForEmail: vi.fn(),
     updateUser: vi.fn(),
+    getUser: vi.fn(),
   },
   from: vi.fn(),
 }
@@ -20,6 +21,11 @@ const mockSupabase = {
 vi.mock('@/lib/rate-limit', () => ({
   rateLimitLogin: vi.fn(),
   rateLimitPasswordReset: vi.fn(),
+}))
+
+// 権限チェック関数のモック
+vi.mock('@/lib/auth/permissions', () => ({
+  getRedirectUrlForUser: vi.fn(),
 }))
 
 // Next.jsのモック
@@ -152,27 +158,153 @@ describe('Auth Actions', () => {
   })
 
   describe('signIn', () => {
-    it('ログインが成功した場合、APPドメインにリダイレクト', async () => {
+    it('運用担当者のログインが成功した場合、OPSドメインにリダイレクト', async () => {
+      const { getRedirectUrlForUser } = await import('@/lib/auth/permissions')
       const formData = new FormData()
-      formData.append('email', 'test@example.com')
+      formData.append('email', 'ops@example.com')
       formData.append('password', 'password123')
+
+      const mockUser = {
+        id: 'user-1',
+        email: 'ops@example.com',
+        user_metadata: { is_ops: true }
+      }
 
       mockSupabase.auth.signInWithPassword.mockResolvedValue({
         data: {
-          user: { id: 'user-1' },
+          user: mockUser,
           session: { access_token: 'token' },
         },
         error: null,
       })
 
+      mockSupabase.auth.getUser.mockResolvedValue({
+        data: { user: mockUser },
+        error: null,
+      })
+
+      vi.mocked(getRedirectUrlForUser).mockResolvedValue('http://ops.localhost:3000')
+
       await signIn(formData)
 
       expect(mockSupabase.auth.signInWithPassword).toHaveBeenCalledWith({
-        email: 'test@example.com',
+        email: 'ops@example.com',
         password: 'password123',
       })
+      expect(getRedirectUrlForUser).toHaveBeenCalledWith(mockUser)
       expect(vi.mocked(nextCache.revalidatePath)).toHaveBeenCalledWith('/', 'layout')
-      expect(vi.mocked(nextNavigation.redirect)).toHaveBeenCalledWith(process.env.NEXT_PUBLIC_APP_URL)
+      expect(vi.mocked(nextNavigation.redirect)).toHaveBeenCalledWith('http://ops.localhost:3000')
+    })
+
+    it('管理者のログインが成功した場合、ADMINドメインにリダイレクト', async () => {
+      const { getRedirectUrlForUser } = await import('@/lib/auth/permissions')
+      const formData = new FormData()
+      formData.append('email', 'admin@example.com')
+      formData.append('password', 'password123')
+
+      const mockUser = {
+        id: 'user-2',
+        email: 'admin@example.com'
+      }
+
+      mockSupabase.auth.signInWithPassword.mockResolvedValue({
+        data: {
+          user: mockUser,
+          session: { access_token: 'token' },
+        },
+        error: null,
+      })
+
+      mockSupabase.auth.getUser.mockResolvedValue({
+        data: { user: mockUser },
+        error: null,
+      })
+
+      vi.mocked(getRedirectUrlForUser).mockResolvedValue('http://admin.localhost:3000')
+
+      await signIn(formData)
+
+      expect(mockSupabase.auth.signInWithPassword).toHaveBeenCalledWith({
+        email: 'admin@example.com',
+        password: 'password123',
+      })
+      expect(getRedirectUrlForUser).toHaveBeenCalledWith(mockUser)
+      expect(vi.mocked(nextCache.revalidatePath)).toHaveBeenCalledWith('/', 'layout')
+      expect(vi.mocked(nextNavigation.redirect)).toHaveBeenCalledWith('http://admin.localhost:3000')
+    })
+
+    it('一般メンバーのログインが成功した場合、APPドメインにリダイレクト', async () => {
+      const { getRedirectUrlForUser } = await import('@/lib/auth/permissions')
+      const formData = new FormData()
+      formData.append('email', 'member@example.com')
+      formData.append('password', 'password123')
+
+      const mockUser = {
+        id: 'user-3',
+        email: 'member@example.com'
+      }
+
+      mockSupabase.auth.signInWithPassword.mockResolvedValue({
+        data: {
+          user: mockUser,
+          session: { access_token: 'token' },
+        },
+        error: null,
+      })
+
+      mockSupabase.auth.getUser.mockResolvedValue({
+        data: { user: mockUser },
+        error: null,
+      })
+
+      vi.mocked(getRedirectUrlForUser).mockResolvedValue('http://app.localhost:3000')
+
+      await signIn(formData)
+
+      expect(mockSupabase.auth.signInWithPassword).toHaveBeenCalledWith({
+        email: 'member@example.com',
+        password: 'password123',
+      })
+      expect(getRedirectUrlForUser).toHaveBeenCalledWith(mockUser)
+      expect(vi.mocked(nextCache.revalidatePath)).toHaveBeenCalledWith('/', 'layout')
+      expect(vi.mocked(nextNavigation.redirect)).toHaveBeenCalledWith('http://app.localhost:3000')
+    })
+
+    it('組織未所属ユーザーのログインが成功した場合、オンボーディングにリダイレクト', async () => {
+      const { getRedirectUrlForUser } = await import('@/lib/auth/permissions')
+      const formData = new FormData()
+      formData.append('email', 'newuser@example.com')
+      formData.append('password', 'password123')
+
+      const mockUser = {
+        id: 'user-4',
+        email: 'newuser@example.com'
+      }
+
+      mockSupabase.auth.signInWithPassword.mockResolvedValue({
+        data: {
+          user: mockUser,
+          session: { access_token: 'token' },
+        },
+        error: null,
+      })
+
+      mockSupabase.auth.getUser.mockResolvedValue({
+        data: { user: mockUser },
+        error: null,
+      })
+
+      vi.mocked(getRedirectUrlForUser).mockResolvedValue('http://localhost:3000/onboarding')
+
+      await signIn(formData)
+
+      expect(mockSupabase.auth.signInWithPassword).toHaveBeenCalledWith({
+        email: 'newuser@example.com',
+        password: 'password123',
+      })
+      expect(getRedirectUrlForUser).toHaveBeenCalledWith(mockUser)
+      expect(vi.mocked(nextCache.revalidatePath)).toHaveBeenCalledWith('/', 'layout')
+      expect(vi.mocked(nextNavigation.redirect)).toHaveBeenCalledWith('http://localhost:3000/onboarding')
     })
 
     it('ログインに失敗した場合、エラーメッセージを返す', async () => {
@@ -193,16 +325,16 @@ describe('Auth Actions', () => {
   })
 
   describe('signOut', () => {
-    it('ログアウトが成功した場合、ログイン画面にリダイレクト', async () => {
+    it('ログアウトが成功した場合、成功メッセージを返す', async () => {
       mockSupabase.auth.signOut.mockResolvedValue({
         error: null,
       })
 
-      await signOut()
+      const result = await signOut()
 
       expect(mockSupabase.auth.signOut).toHaveBeenCalled()
       expect(vi.mocked(nextCache.revalidatePath)).toHaveBeenCalledWith('/', 'layout')
-      expect(vi.mocked(nextNavigation.redirect)).toHaveBeenCalledWith('/login')
+      expect(result).toEqual({ success: true })
     })
 
     it('ログアウトに失敗した場合、エラーメッセージを返す', async () => {
