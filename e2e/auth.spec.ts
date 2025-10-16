@@ -14,13 +14,27 @@ test.describe('認証フロー', () => {
     await page.fill('input[name="email"]', testEmail)
     await page.fill('input[name="password"]', testPassword)
     await page.fill('input[name="confirmPassword"]', testPassword)
+    // B2B必須フィールドを追加
+    await page.fill('input[name="companyName"]', 'Test Company')
+    await page.fill('input[name="contactName"]', 'Test User')
 
     // サインアップボタンをクリック
     await page.click('button[type="submit"]')
 
-    // メール確認画面に遷移することを確認
-    await expect(page).toHaveURL(/verify-email/)
-    await expect(page.locator('text=メールを確認してください')).toBeVisible()
+    // メール確認がOFFの環境では、プラン選択ページに遷移
+    // メール確認がONの環境では、verify-emailに遷移
+    // ここでは環境に応じて分岐（開発環境はメール確認OFF想定）
+    await expect(page).toHaveURL(/\/(verify-email|onboarding\/select-plan)/, {
+      timeout: 10000,
+    })
+
+    // プラン選択ページに遷移した場合は成功
+    const url = page.url()
+    if (url.includes('select-plan')) {
+      await expect(page.locator('text=プランを選択してください')).toBeVisible()
+    } else {
+      await expect(page.locator('text=メールを確認してください')).toBeVisible()
+    }
   })
 
   test('ログインフロー', async ({ page }) => {

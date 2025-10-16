@@ -5,8 +5,8 @@ import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 
 export const metadata: Metadata = {
-  title: 'Welcome - Example',
-  description: 'マーケティングサイト',
+  title: 'Example - マーケティングサイト',
+  description: 'Exampleの公式サイト。企業向けSaaSプラットフォームをご紹介します。',
 }
 
 export default async function WwwLayout({
@@ -37,7 +37,7 @@ export default async function WwwLayout({
   return (
     <div className="min-h-screen bg-gray-600">
       {/* ヘッダー */}
-      <header className="border-b">
+      {/* <header className="border-b">
         <nav className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="text-xl font-bold">Example</div>
@@ -57,7 +57,7 @@ export default async function WwwLayout({
             </div>
           </div>
         </nav>
-      </header>
+      </header> */}
 
       {/* メインコンテンツ */}
       <main>{children}</main>

@@ -46,7 +46,10 @@ describe('Supabase Client (Browser)', () => {
 
       expect(mockCreateBrowserClient).toHaveBeenCalledWith(
         'https://test.supabase.co',
-        'test-anon-key'
+        'test-anon-key',
+        expect.objectContaining({
+          cookieOptions: expect.any(Object),
+        })
       )
       expect(client).toBe(mockClient)
     })
@@ -63,7 +66,10 @@ describe('Supabase Client (Browser)', () => {
       expect(mockCreateBrowserClient).toHaveBeenCalledTimes(1)
       expect(mockCreateBrowserClient).toHaveBeenCalledWith(
         'https://example.supabase.co',
-        'example-anon-key'
+        'example-anon-key',
+        expect.objectContaining({
+          cookieOptions: expect.any(Object),
+        })
       )
     })
 
@@ -95,7 +101,10 @@ describe('Supabase Client (Browser)', () => {
 
       expect(mockCreateBrowserClient).toHaveBeenCalledWith(
         'https://abcdefghijklmnop.supabase.co',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test'
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test',
+        expect.objectContaining({
+          cookieOptions: expect.any(Object),
+        })
       )
     })
 
@@ -109,7 +118,13 @@ describe('Supabase Client (Browser)', () => {
 
       // 環境変数がundefinedでも関数自体は実行できる
       expect(() => createClient()).not.toThrow()
-      expect(mockCreateBrowserClient).toHaveBeenCalledWith(undefined, undefined)
+      expect(mockCreateBrowserClient).toHaveBeenCalledWith(
+        undefined,
+        undefined,
+        expect.objectContaining({
+          cookieOptions: expect.any(Object),
+        })
+      )
     })
   })
 

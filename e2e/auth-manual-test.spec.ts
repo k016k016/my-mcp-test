@@ -14,28 +14,22 @@ test.describe('認証フロー（メール確認OFF）', () => {
     await page.click('text=サインアップ')
     await expect(page).toHaveURL(/\/signup/)
 
-    // 3. メールとパスワードを入力
+    // 3. フォームに入力（B2B必須フィールドを含む）
     await page.fill('input[name="email"]', testEmail)
     await page.fill('input[name="password"]', testPassword)
+    await page.fill('input[name="confirmPassword"]', testPassword)
+    await page.fill('input[name="companyName"]', 'テスト株式会社')
+    await page.fill('input[name="contactName"]', 'テスト太郎')
 
     // 4. サインアップボタンをクリック
     await page.click('button[type="submit"]')
 
-    // 5. メール確認がOFFなので、直接onboardingに遷移
-    await expect(page).toHaveURL(/\/onboarding\/create-organization/, {
+    // 5. メール確認がOFFなので、プラン選択ページに遷移
+    await expect(page).toHaveURL(/\/onboarding\/select-plan/, {
       timeout: 10000,
     })
 
-    // 6. 組織名を入力
-    await page.fill('input[name="name"]', 'テスト組織')
-
-    // 7. 組織を作成
-    await page.click('button[type="submit"]')
-
-    // 8. APPドメインのホームページに遷移
-    await expect(page).toHaveURL(/app\.localhost:3000/, { timeout: 10000 })
-
-    console.log('✅ 新規ユーザー登録フロー完了')
+    console.log('✅ 新規ユーザー登録フロー完了（プラン選択まで）')
     console.log(`📧 テストユーザー: ${testEmail}`)
   })
 

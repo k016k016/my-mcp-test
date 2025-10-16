@@ -19,13 +19,17 @@ export async function createClient() {
               // サブドメイン間でCookieを共有するための設定
               const cookieOptions = { ...options }
 
-              // 開発環境: localhost間でCookie共有
-              if (process.env.NODE_ENV === 'development') {
-                cookieOptions.domain = '.localhost'
-              }
-              // 本番環境でカスタムドメインを使用する場合
-              else if (process.env.NEXT_PUBLIC_COOKIE_DOMAIN) {
+              // カスタムクッキードメインが設定されている場合（開発・本番共通）
+              if (process.env.NEXT_PUBLIC_COOKIE_DOMAIN) {
                 cookieOptions.domain = process.env.NEXT_PUBLIC_COOKIE_DOMAIN
+                cookieOptions.sameSite = 'lax'
+                cookieOptions.path = '/'
+              }
+              // 開発環境でカスタムドメインが未設定の場合はlocalhostをデフォルトに
+              else if (process.env.NODE_ENV === 'development') {
+                cookieOptions.domain = '.localhost'
+                cookieOptions.sameSite = 'lax'
+                cookieOptions.path = '/'
               }
               // それ以外（Vercelデフォルトドメイン等）: Supabaseのデフォルト設定を使用
 

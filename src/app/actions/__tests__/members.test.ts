@@ -28,6 +28,12 @@ vi.mock('@/lib/resend/operations', () => ({
   sendEmail: vi.fn(),
 }))
 
+// ライセンスヘルパー関数のモック
+vi.mock('@/lib/licenses/helpers', () => ({
+  getOrganizationLicense: vi.fn(),
+  hasAvailableSeats: vi.fn(),
+}))
+
 describe('Members Actions', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -85,6 +91,11 @@ describe('Members Actions', () => {
         data: { user: { id: '00000000-0000-4000-8000-000000000002' } },
         error: null,
       })
+
+      // ライセンスヘルパー関数をモック
+      const { getOrganizationLicense, hasAvailableSeats } = await import('@/lib/licenses/helpers')
+      vi.mocked(getOrganizationLicense).mockResolvedValue(null) // ライセンスなし
+      vi.mocked(hasAvailableSeats).mockResolvedValue(true)
 
       let callCount = 0
       mockSupabase.from.mockImplementation(() => {

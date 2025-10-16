@@ -53,9 +53,15 @@ describe('Validation', () => {
       const data = signUpSchema.parse({
         email: 'test@example.com',
         password: 'Password123',
+        confirmPassword: 'Password123',
+        companyName: 'Test Company',
+        contactName: 'Test User',
       })
       expect(data.email).toBe('test@example.com')
       expect(data.password).toBe('Password123')
+      expect(data.confirmPassword).toBe('Password123')
+      expect(data.companyName).toBe('Test Company')
+      expect(data.contactName).toBe('Test User')
     })
 
     it('無効なデータを拒否する', () => {
@@ -63,6 +69,9 @@ describe('Validation', () => {
         signUpSchema.parse({
           email: 'invalid',
           password: 'weak',
+          confirmPassword: 'weak',
+          companyName: 'Test Company',
+          contactName: 'Test User',
         })
       ).toThrow()
     })

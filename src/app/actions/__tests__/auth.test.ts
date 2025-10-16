@@ -13,6 +13,7 @@ const mockSupabase = {
     resetPasswordForEmail: vi.fn(),
     updateUser: vi.fn(),
   },
+  from: vi.fn(),
 }
 
 // レート制限のモック
@@ -45,6 +46,8 @@ describe('Auth Actions', () => {
       formData.append('email', 'test@example.com')
       formData.append('password', 'password123')
       formData.append('confirmPassword', 'password123')
+      formData.append('companyName', 'Test Company')
+      formData.append('contactName', 'Test User')
 
       mockSupabase.auth.signUp.mockResolvedValue({
         data: {
@@ -54,17 +57,30 @@ describe('Auth Actions', () => {
         error: null,
       })
 
-      await signUp(formData)
+      // profiles更新のモック
+      mockSupabase.from.mockReturnValue({
+        update: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({
+          data: null,
+          error: null,
+        }),
+      })
+
+      const result = await signUp(formData)
 
       expect(mockSupabase.auth.signUp).toHaveBeenCalledWith({
         email: 'test@example.com',
         password: 'password123',
         options: {
           emailRedirectTo: `${process.env.NEXT_PUBLIC_WWW_URL}/auth/callback`,
+          data: {
+            company_name: 'Test Company',
+            name: 'Test User',
+          },
         },
       })
       expect(vi.mocked(nextCache.revalidatePath)).toHaveBeenCalledWith('/', 'layout')
-      expect(vi.mocked(nextNavigation.redirect)).toHaveBeenCalledWith('/auth/verify-email')
+      expect(result).toEqual({ success: true, requiresEmailConfirmation: true })
     })
 
     it('サインアップが成功し、即座にログインできた場合はAPPドメインにリダイレクト', async () => {
@@ -72,6 +88,8 @@ describe('Auth Actions', () => {
       formData.append('email', 'test@example.com')
       formData.append('password', 'password123')
       formData.append('confirmPassword', 'password123')
+      formData.append('companyName', 'Test Company')
+      formData.append('contactName', 'Test User')
 
       mockSupabase.auth.signUp.mockResolvedValue({
         data: {
@@ -81,10 +99,19 @@ describe('Auth Actions', () => {
         error: null,
       })
 
-      await signUp(formData)
+      // profiles更新のモック
+      mockSupabase.from.mockReturnValue({
+        update: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({
+          data: null,
+          error: null,
+        }),
+      })
+
+      const result = await signUp(formData)
 
       expect(vi.mocked(nextCache.revalidatePath)).toHaveBeenCalledWith('/', 'layout')
-      expect(vi.mocked(nextNavigation.redirect)).toHaveBeenCalledWith(process.env.NEXT_PUBLIC_APP_URL)
+      expect(result).toEqual({ success: true, requiresEmailConfirmation: false })
     })
 
     it('パスワードが一致しない場合、エラーメッセージを返す', async () => {
@@ -92,6 +119,8 @@ describe('Auth Actions', () => {
       formData.append('email', 'test@example.com')
       formData.append('password', 'password123')
       formData.append('confirmPassword', 'different123')
+      formData.append('companyName', 'Test Company')
+      formData.append('contactName', 'Test User')
 
       const result = await signUp(formData)
 
@@ -107,6 +136,8 @@ describe('Auth Actions', () => {
       formData.append('email', 'test@example.com')
       formData.append('password', 'Password123')
       formData.append('confirmPassword', 'Password123')
+      formData.append('companyName', 'Test Company')
+      formData.append('contactName', 'Test User')
 
       mockSupabase.auth.signUp.mockResolvedValue({
         data: { user: null, session: null },

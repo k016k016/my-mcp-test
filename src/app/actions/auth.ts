@@ -13,6 +13,7 @@ import {
   updatePasswordSchema,
 } from '@/lib/validation'
 import { rateLimitLogin, rateLimitPasswordReset } from '@/lib/rate-limit'
+import { getRedirectUrlForUser } from '@/lib/auth/permissions'
 
 /**
  * メールアドレスとパスワードでサインアップ
@@ -133,9 +134,16 @@ export async function signIn(formData: FormData) {
       return { error: 'ログインに失敗しました。もう一度お試しください。' }
     }
 
-    // ログイン成功後、APPドメインにリダイレクト
-    revalidatePath('/', 'layout')
-    redirect(env.NEXT_PUBLIC_APP_URL)
+    // ログイン成功 - ユーザーの権限に応じてリダイレクト
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const redirectUrl = await getRedirectUrlForUser(user)
+      revalidatePath('/', 'layout')
+      redirect(redirectUrl)
+    } else {
+      revalidatePath('/', 'layout')
+      redirect(env.NEXT_PUBLIC_APP_URL)
+    }
   } catch (error) {
     console.error('[signIn] Unexpected error:', error)
 
@@ -162,16 +170,11 @@ export async function signOut() {
       return { error: 'ログアウトに失敗しました。もう一度お試しください。' }
     }
 
+    // ログアウト成功
     revalidatePath('/', 'layout')
-    redirect('/login')
+    return { success: true }
   } catch (error) {
     console.error('[signOut] Unexpected error:', error)
-
-    // redirectはthrowするので、それ以外のエラーのみキャッチ
-    if (error && typeof error === 'object' && 'digest' in error) {
-      throw error
-    }
-
     return { error: '予期しないエラーが発生しました。もう一度お試しください。' }
   }
 }
