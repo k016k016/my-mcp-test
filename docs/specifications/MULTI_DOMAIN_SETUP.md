@@ -161,33 +161,49 @@ export default function MyComponent() {
 
 ### ドメインごとの認証制御
 
-\`\`\`typescript
-// src/middleware.ts で拡張可能
-import { getDomainConfig } from '@/lib/domains/config'
+```typescript
+// src/middleware.ts
+import { getDomainFromHost, DOMAINS } from '@/lib/domains/config'
+import { createClient } from '@/lib/supabase/server'
+import { isOpsUser, hasAdminAccess } from '@/lib/auth/permissions'
 
 export async function middleware(request: NextRequest) {
   const domain = getDomainFromHost(host)
-  const config = getDomainConfig(domain)
 
-  // 認証が必要なドメインの場合
-  if (config.requireAuth) {
-    const user = await getUser(request)
+  // 認証が必要なドメインの認証チェック
+  if (domain === DOMAINS.APP || domain === DOMAINS.ADMIN || domain === DOMAINS.OPS) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
     if (!user) {
-      // ログインページにリダイレクト
-      return NextResponse.redirect(domainUrls.www('/login'))
+      // 未認証の場合、適切なログインページへリダイレクト
+      const loginUrl = domain === DOMAINS.OPS
+        ? '/login'  // OPSは独自ログイン
+        : `${process.env.NEXT_PUBLIC_WWW_URL}/login`
+      return NextResponse.redirect(new URL(loginUrl, request.url))
     }
 
-    // ロール制限がある場合
-    if (config.requireRole && user.role !== config.requireRole) {
-      // アクセス拒否
-      return NextResponse.redirect(domainUrls.app('/'))
+    // OPSドメインの場合は運用担当者権限チェック
+    if (domain === DOMAINS.OPS) {
+      const hasOpsAccess = await isOpsUser(user)
+      if (!hasOpsAccess) {
+        return NextResponse.redirect(`${process.env.NEXT_PUBLIC_WWW_URL}/login`)
+      }
+    }
+
+    // ADMINドメインの場合は管理者権限チェック
+    if (domain === DOMAINS.ADMIN) {
+      const hasAdminPermission = await hasAdminAccess(user)
+      if (!hasAdminPermission) {
+        return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}?message=管理者権限がありません`)
+      }
     }
   }
 
   // 通常の処理を続行
   return response
 }
-\`\`\`
+```
 
 ## 🎨 ドメインごとのスタイリング
 
@@ -225,30 +241,29 @@ export const DOMAIN_CONFIG = {
     baseUrl: process.env.NEXT_PUBLIC_WWW_URL,
     requireAuth: false,
     theme: 'light',
-    // カスタム設定を追加可能
   },
   [DOMAINS.APP]: {
     name: 'アプリケーション',
     description: 'ユーザー向けアプリ',
     baseUrl: process.env.NEXT_PUBLIC_APP_URL,
     requireAuth: true,
-    allowedRoles: ['user', 'admin'],
+    allowedRoles: ['owner', 'admin', 'member'], // 組織ベースのロール
     theme: 'light',
   },
   [DOMAINS.ADMIN]: {
     name: '管理画面',
-    description: '管理者向け',
+    description: '組織管理者向け',
     baseUrl: process.env.NEXT_PUBLIC_ADMIN_URL,
     requireAuth: true,
-    requireRole: 'admin',
+    allowedRoles: ['owner', 'admin'], // 組織内の管理者のみ
     theme: 'admin',
   },
   [DOMAINS.OPS]: {
     name: '運用画面',
-    description: '運用チーム向け',
+    description: '運用担当者向け',
     baseUrl: process.env.NEXT_PUBLIC_OPS_URL,
     requireAuth: true,
-    requireRole: 'ops',
+    requireOpsAccess: true, // user_metadata.is_ops = true が必要
     theme: 'dark',
   },
 }
