@@ -14,6 +14,7 @@ import {
 } from '@/lib/validation'
 import { rateLimitLogin, rateLimitPasswordReset } from '@/lib/rate-limit'
 import { getRedirectUrlForUser } from '@/lib/auth/permissions'
+import { setCurrentOrganizationId } from '@/lib/organization/current'
 
 /**
  * メールアドレスとパスワードでサインアップ
@@ -119,6 +120,9 @@ export async function signUp(formData: FormData) {
           console.error('[signUp] Failed to add owner:', memberError)
           // メンバー追加に失敗した場合は組織を削除
           await supabase.from('organizations').delete().eq('id', organization.id)
+        } else {
+          // 組織作成成功 - 現在の組織IDを設定
+          await setCurrentOrganizationId(organization.id)
         }
       }
     }

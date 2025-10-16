@@ -146,10 +146,11 @@ export default async function MembersPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getRoleBadgeClass(
+                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${getRoleBadgeClass(
                               m.role
                             )}`}
                           >
+                            {m.role === 'owner' && <span className="text-sm">👑</span>}
                             {getRoleLabel(m.role)}
                           </span>
                         </td>
