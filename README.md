@@ -111,10 +111,10 @@ npm run dev
 ```
 
 以下のURLでアクセス：
-- http://localhost:3000 - マーケティングサイト
-- http://app.localhost:3000 - ユーザーアプリ
-- http://admin.localhost:3000 - 管理画面
-- http://ops.localhost:3000 - 運用画面
+- http://www.localhost.test:3000 - マーケティングサイト
+- http://app.localhost.test:3000 - ユーザーアプリ
+- http://admin.localhost.test:3000 - 管理画面
+- http://ops.localhost.test:3000 - 運用画面
 
 ## 📚 主要機能
 

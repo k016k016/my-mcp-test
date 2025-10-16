@@ -5,7 +5,11 @@ import { env } from '@/lib/env'
 import { getCurrentOrganizationId } from '@/lib/organization/current'
 import { InitializeOrganization } from '@/components/initialize-organization'
 
-export default async function AppPage() {
+type AppPageProps = {
+  searchParams: { error?: string }
+}
+
+export default async function AppPage({ searchParams }: AppPageProps) {
   const supabase = await createClient()
 
   // ユーザー認証チェック
@@ -61,6 +65,18 @@ export default async function AppPage() {
     <div>
       {/* 組織クッキーの初期化（必要な場合のみ） */}
       {needsOrgCookieUpdate && <InitializeOrganization organizationId={currentOrg.id} />}
+
+      {/* エラーメッセージ */}
+      {searchParams.error && (
+        <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
+          <div className="flex items-center">
+            <svg className="w-6 h-6 text-red-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-red-800 font-medium">{searchParams.error}</p>
+          </div>
+        </div>
+      )}
 
       {/* ヘッダー */}
       <div className="mb-8 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-8">

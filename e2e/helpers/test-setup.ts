@@ -9,7 +9,10 @@ export function createAdminClient() {
   const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
   if (!supabaseUrl || !supabaseServiceRoleKey) {
-    throw new Error('Supabase環境変数が設定されていません')
+    throw new Error(
+      'Supabase環境変数が設定されていません。\n' +
+        'NEXT_PUBLIC_SUPABASE_URL と SUPABASE_SERVICE_ROLE_KEY を .env.local に設定してください。'
+    )
   }
 
   return createClient<Database>(supabaseUrl, supabaseServiceRoleKey, {

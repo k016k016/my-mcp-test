@@ -2,6 +2,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { hasAdminAccess } from '@/lib/auth/permissions'
 
 export default async function AdminPage() {
   const supabase = await createClient()
@@ -14,6 +15,14 @@ export default async function AdminPage() {
   if (!user) {
     const wwwUrl = process.env.NEXT_PUBLIC_WWW_URL || 'http://localhost:3000'
     redirect(`${wwwUrl}/login`)
+  }
+
+  // 管理者権限チェック
+  const isAdmin = await hasAdminAccess(user)
+
+  if (!isAdmin) {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://app.localhost:3000'
+    redirect(`${appUrl}?error=管理者権限がありません`)
   }
 
   // 統計情報を取得

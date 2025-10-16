@@ -25,9 +25,9 @@ export async function createClient() {
                 cookieOptions.sameSite = 'lax'
                 cookieOptions.path = '/'
               }
-              // 開発環境でカスタムドメインが未設定の場合はlocalhostをデフォルトに
+              // 開発環境でカスタムドメインが未設定の場合はlocalhost.testをデフォルトに
               else if (process.env.NODE_ENV === 'development') {
-                cookieOptions.domain = '.localhost'
+                cookieOptions.domain = '.localhost.test'
                 cookieOptions.sameSite = 'lax'
                 cookieOptions.path = '/'
               }

@@ -11,7 +11,7 @@ test.describe('認証フロー（メール確認OFF）', () => {
     await expect(page).toHaveTitle(/Example/)
 
     // 2. サインアップページに移動
-    await page.click('text=サインアップ')
+    await page.click('a[href="/signup"]:has-text("サインアップ")')
     await expect(page).toHaveURL(/\/signup/)
 
     // 3. フォームに入力（B2B必須フィールドを含む）
@@ -34,12 +34,14 @@ test.describe('認証フロー（メール確認OFF）', () => {
   })
 
   test('Cookie共有の確認', async ({ page, context }) => {
-    // 前のテストでログイン済みの状態で実行
-    // まず新規ユーザーでログイン
+    // テスト用ユーザーでログイン（既存のテストユーザーを使用）
+    const existingTestEmail = 'member@example.com'
+    const existingTestPassword = 'MemberPassword123!'
+
     await page.goto('http://localhost:3000/login')
-    await page.fill('input[name="email"]', testEmail)
-    await page.fill('input[name="password"]', testPassword)
-    await page.click('button[type="submit"]')
+    await page.fill('input[name="email"]', existingTestEmail)
+    await page.fill('input[name="password"]', existingTestPassword)
+    await page.click('button[type="submit"]:has-text("ログイン")')
     await expect(page).toHaveURL(/app\.localhost:3000/, { timeout: 10000 })
 
     // Cookieを確認
