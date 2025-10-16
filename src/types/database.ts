@@ -59,6 +59,9 @@ export interface Profile {
   // タイムスタンプ
   created_at: string
   updated_at: string
+
+  // 論理削除
+  deleted_at: string | null
 }
 
 export interface OrganizationMember {
@@ -70,6 +73,9 @@ export interface OrganizationMember {
   // タイムスタンプ
   created_at: string
   updated_at: string
+
+  // 論理削除
+  deleted_at: string | null
 }
 
 export interface Invitation {

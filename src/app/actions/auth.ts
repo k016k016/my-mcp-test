@@ -18,6 +18,7 @@ import { getRedirectUrlForUser } from '@/lib/auth/permissions'
 /**
  * メールアドレスとパスワードでサインアップ
  * B2B企業向け: 会社名と担当者名も必須
+ * サインアップ成功後、自動的に組織を作成してユーザーをownerとして追加
  */
 export async function signUp(formData: FormData) {
   try {
@@ -75,6 +76,50 @@ export async function signUp(formData: FormData) {
       if (profileError) {
         console.error('[signUp] Profile update error:', profileError)
         // プロフィール更新エラーは致命的ではないため、警告のみ
+      }
+
+      // サインアップ成功後、自動的に組織を作成
+      // 会社名からslugを生成（小文字、スペース→ハイフン、特殊文字削除）
+      const slug = companyName
+        .toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^\w-]/g, '')
+        .replace(/--+/g, '-')
+        .substring(0, 50) // 最大50文字
+
+      // ユニークなslugを生成（タイムスタンプを追加）
+      const uniqueSlug = `${slug}-${Date.now()}`
+
+      // 組織を作成
+      const { data: organization, error: orgError } = await supabase
+        .from('organizations')
+        .insert({
+          name: companyName,
+          slug: uniqueSlug,
+          subscription_plan: 'free',
+          subscription_status: 'trialing',
+          trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(), // 14日間のトライアル
+        })
+        .select()
+        .single()
+
+      if (orgError || !organization) {
+        console.error('[signUp] Failed to create organization:', orgError)
+        // 組織作成に失敗しても、ユーザーは作成済みなので、後でオンボーディングで組織を作成できる
+        // エラーは返さない
+      } else {
+        // ユーザーをownerとして組織に追加
+        const { error: memberError } = await supabase.from('organization_members').insert({
+          organization_id: organization.id,
+          user_id: data.user.id,
+          role: 'owner',
+        })
+
+        if (memberError) {
+          console.error('[signUp] Failed to add owner:', memberError)
+          // メンバー追加に失敗した場合は組織を削除
+          await supabase.from('organizations').delete().eq('id', organization.id)
+        }
       }
     }
 

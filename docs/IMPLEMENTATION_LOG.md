@@ -453,6 +453,253 @@ return `${process.env.NEXT_PUBLIC_WWW_URL}/onboarding/create-organization`
 
 ---
 
+## 2025-01-17: サインアップフロー完成とメンバー管理機能の実装
+
+### 📌 実装の背景
+
+PROJECT_PROGRESS.mdに記載されていた次のステップを実装：
+1. サインアップの流れを完成させる（権限はadmin）
+2. adminでユーザを追加できる。権限も設定可能
+3. adminでユーザを削除・変更できる。（論理削除）
+
+### 🎯 実装内容
+
+#### 1. サインアップ時の組織自動作成
+
+**ファイル**: `src/app/actions/auth.ts`
+
+**変更内容**:
+サインアップ成功後、会社名を使って自動的に組織を作成し、ユーザーを`owner`として追加
+
+```typescript
+// サインアップ成功後、自動的に組織を作成
+const slug = companyName
+  .toLowerCase()
+  .replace(/\s+/g, '-')
+  .replace(/[^\w-]/g, '')
+  .replace(/--+/g, '-')
+  .substring(0, 50)
+
+const uniqueSlug = `${slug}-${Date.now()}`
+
+// 組織を作成
+const { data: organization } = await supabase
+  .from('organizations')
+  .insert({
+    name: companyName,
+    slug: uniqueSlug,
+    subscription_plan: 'free',
+    subscription_status: 'trialing',
+    trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+  })
+  .select()
+  .single()
+
+// ユーザーをownerとして組織に追加
+await supabase.from('organization_members').insert({
+  organization_id: organization.id,
+  user_id: data.user.id,
+  role: 'owner',
+})
+```
+
+**動作**:
+- 会社名から一意なslugを生成（タイムスタンプ付き）
+- 組織を作成し、14日間のトライアル期間を設定
+- ユーザーを`owner`として組織に追加
+- `/onboarding/create-organization`をスキップして直接ADMIN画面へ
+
+**リダイレクト先の変更** (`src/app/www/signup/page.tsx`):
+```typescript
+// メール確認不要の場合はADMIN画面へ（組織は自動作成済み、ownerとして追加済み）
+const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL || 'http://admin.local.test:3000'
+window.location.href = adminUrl
+```
+
+#### 2. Admin画面のメンバー管理機能
+
+**新規ページ**: `src/app/admin/members/page.tsx`
+
+**実装内容**:
+- メンバー一覧の表示（削除済みメンバーを除外）
+- `InviteMemberForm`コンポーネントの配置
+- ロール別のバッジ表示（オーナー/管理者/メンバー）
+- アバター表示
+
+```typescript
+// 組織のメンバー一覧を取得（削除済みを除外）
+const { data: members } = await supabase
+  .from('organization_members')
+  .select(`
+    id,
+    role,
+    created_at,
+    profile:profiles (id, email, full_name, name)
+  `)
+  .eq('organization_id', organizationId)
+  .is('deleted_at', null)  // 論理削除済みを除外
+  .order('created_at', { ascending: false })
+```
+
+**ナビゲーションの追加** (`src/app/admin/layout.tsx`):
+- サイドバーに「メンバー管理」リンクを追加（`/members`）
+
+#### 3. 論理削除（ソフトデリート）の実装
+
+**マイグレーション**: `supabase/migrations/20250117000001_add_soft_delete.sql`
+
+```sql
+-- organization_membersテーブルにdeleted_atカラムを追加
+ALTER TABLE organization_members
+ADD COLUMN deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL;
+
+-- profilesテーブルにもdeleted_atカラムを追加（将来のため）
+ALTER TABLE profiles
+ADD COLUMN deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL;
+
+-- deleted_atが設定されているレコードを除外するためのインデックス
+CREATE INDEX idx_organization_members_deleted_at
+ON organization_members(deleted_at) WHERE deleted_at IS NOT NULL;
+
+CREATE INDEX idx_profiles_deleted_at
+ON profiles(deleted_at) WHERE deleted_at IS NOT NULL;
+```
+
+**型定義の更新** (`src/types/database.ts`):
+```typescript
+export interface Profile {
+  // ... 既存フィールド
+  deleted_at: string | null
+}
+
+export interface OrganizationMember {
+  // ... 既存フィールド
+  deleted_at: string | null
+}
+```
+
+**Server Actionsの更新** (`src/app/actions/members.ts`):
+
+削除処理を物理削除から論理削除に変更：
+```typescript
+// 修正前
+const { error: deleteError } = await supabase
+  .from('organization_members')
+  .delete()
+  .eq('id', memberId)
+
+// 修正後
+const { error: deleteError } = await supabase
+  .from('organization_members')
+  .update({ deleted_at: new Date().toISOString() })
+  .eq('id', memberId)
+```
+
+全てのクエリに削除済み除外条件を追加：
+```typescript
+.is('deleted_at', null)
+```
+
+適用箇所：
+- `inviteMember()` - 権限チェック時
+- `updateMemberRole()` - 権限チェックと対象メンバー取得時
+- `removeMember()` - 対象メンバー取得と権限チェック時
+- `src/app/admin/members/page.tsx` - メンバー一覧取得時
+
+#### 4. メンバー編集・削除UI
+
+**新規コンポーネント**: `src/components/MemberActions.tsx`
+
+**機能**:
+- ロール変更ドロップダウン（owner以外）
+- 削除ボタン（owner以外）
+- 削除確認モーダル
+- ローディング状態の表示
+
+```typescript
+export default function MemberActions({
+  memberId,
+  organizationId,
+  currentRole,
+  isCurrentUser,
+  isOwner,
+}: MemberActionsProps) {
+  const handleRoleChange = async (newRole: OrganizationRole) => {
+    const result = await updateMemberRole(organizationId, memberId, newRole)
+    if (result.error) {
+      alert(result.error)
+    } else {
+      router.refresh()
+    }
+  }
+
+  const handleDelete = async () => {
+    const result = await removeMember(organizationId, memberId)
+    if (!result.error) {
+      router.refresh()
+    }
+  }
+  // ...
+}
+```
+
+### 📁 変更ファイル一覧
+
+| ファイル | 変更内容 | タイプ |
+|---------|---------|--------|
+| `src/app/actions/auth.ts` | サインアップ時に組織自動作成ロジックを追加 | 変更 |
+| `src/app/www/signup/page.tsx` | サインアップ後のリダイレクト先をADMINに変更 | 変更 |
+| `src/app/admin/members/page.tsx` | メンバー管理ページ | 新規 |
+| `src/app/admin/layout.tsx` | ナビゲーションに「メンバー管理」追加 | 変更 |
+| `src/components/MemberActions.tsx` | メンバーアクションコンポーネント | 新規 |
+| `supabase/migrations/20250117000001_add_soft_delete.sql` | 論理削除用マイグレーション | 新規 |
+| `src/types/database.ts` | deleted_atフィールド追加 | 変更 |
+| `src/app/actions/members.ts` | 論理削除に変更、削除済み除外条件追加 | 変更 |
+
+### ✅ テスト項目
+
+- [ ] サインアップ → 組織自動作成 → ADMIN画面に遷移
+- [ ] サインアップ後、組織にowner権限で追加されている
+- [ ] Admin画面のメンバー管理ページで一覧表示
+- [ ] メンバー招待が機能する（権限設定可能）
+- [ ] メンバーのロール変更が機能する
+- [ ] メンバー削除が論理削除として機能する（deleted_atが設定される）
+- [ ] 削除済みメンバーが一覧に表示されない
+- [ ] オーナーのロール変更・削除ができない
+
+### 🔄 フロー全体像
+
+```
+サインアップから管理画面までの完全なフロー:
+
+1. WWW/signup
+   ↓
+2. ユーザー作成
+   ↓
+3. 会社名から組織を自動作成（owner権限）
+   ↓
+4. ADMIN画面に自動リダイレクト
+   ↓
+5. メンバー管理ページでメンバー招待
+   ↓
+6. メンバーのロール変更・削除（論理削除）
+```
+
+### 🎯 完了した機能
+
+1. ✅ サインアップの流れを完成させる（権限はadmin → owner）
+2. ✅ adminでユーザを追加できる（権限も設定可能）
+3. ✅ adminでユーザを削除・変更できる（論理削除）
+
+### 🔗 関連リンク
+
+- メンバー管理ページ: `src/app/admin/members/page.tsx`
+- メンバーActions: `src/app/actions/members.ts`
+- 論理削除マイグレーション: `supabase/migrations/20250117000001_add_soft_delete.sql`
+- 認証フロー仕様: `docs/specifications/AUTH_FLOW_SPECIFICATION.md`
+
+---
+
 ## テンプレート（次回の実装記録用）
 
 ```markdown

@@ -28,8 +28,9 @@ export default function SignUpPage() {
         // メール確認が必要な場合
         router.push('/auth/verify-email')
       } else {
-        // メール確認不要の場合はプラン選択ページへ（B2Bフロー）
-        router.push('/onboarding/select-plan')
+        // メール確認不要の場合はADMIN画面へ（組織は自動作成済み、ownerとして追加済み）
+        const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL || 'http://admin.local.test:3000'
+        window.location.href = adminUrl
       }
     } else {
       setError('予期しないエラーが発生しました')

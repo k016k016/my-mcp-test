@@ -69,6 +69,7 @@ export async function inviteMember(organizationId: string, email: string, role: 
       .select('role')
       .eq('organization_id', organizationId)
       .eq('user_id', user.id)
+      .is('deleted_at', null)
       .single()
 
     if (!member || (member.role !== 'owner' && member.role !== 'admin')) {
@@ -422,18 +423,20 @@ export async function updateMemberRole(
       .select('role')
       .eq('organization_id', organizationId)
       .eq('user_id', user.id)
+      .is('deleted_at', null)
       .single()
 
     if (!currentMember || (currentMember.role !== 'owner' && currentMember.role !== 'admin')) {
       return { error: 'ロールを変更する権限がありません' }
     }
 
-    // 対象メンバーを取得
+    // 対象メンバーを取得（削除済みを除外）
     const { data: targetMember } = await supabase
       .from('organization_members')
       .select('role, user_id')
       .eq('id', memberId)
       .eq('organization_id', organizationId)
+      .is('deleted_at', null)
       .single()
 
     if (!targetMember) {
@@ -505,12 +508,13 @@ export async function removeMember(organizationId: string, memberId: string) {
       return { error: '認証が必要です' }
     }
 
-    // 対象メンバーを取得
+    // 対象メンバーを取得（削除済みを除外）
     const { data: targetMember } = await supabase
       .from('organization_members')
       .select('role, user_id')
       .eq('id', memberId)
       .eq('organization_id', organizationId)
+      .is('deleted_at', null)
       .single()
 
     if (!targetMember) {
@@ -533,6 +537,7 @@ export async function removeMember(organizationId: string, memberId: string) {
         .select('role')
         .eq('organization_id', organizationId)
         .eq('user_id', user.id)
+        .is('deleted_at', null)
         .single()
 
       if (!currentMember || (currentMember.role !== 'owner' && currentMember.role !== 'admin')) {
@@ -545,10 +550,10 @@ export async function removeMember(organizationId: string, memberId: string) {
       }
     }
 
-    // メンバーを削除
+    // メンバーを論理削除（deleted_atを設定）
     const { error: deleteError } = await supabase
       .from('organization_members')
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq('id', memberId)
 
     if (deleteError) {
