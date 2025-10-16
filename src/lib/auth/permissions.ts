@@ -1,6 +1,7 @@
 // 権限チェック関数
 import { createClient } from '@/lib/supabase/server'
 import { User } from '@supabase/supabase-js'
+import { setCurrentOrganizationId } from '@/lib/organization/current'
 
 /**
  * ユーザーが運用担当者かどうかをチェック
@@ -114,25 +115,31 @@ export async function getUserPermissionLevel(user: User): Promise<{
 
 /**
  * 権限に基づくリダイレクト先を決定
+ * ユーザーが組織に所属している場合、最初の組織を現在の組織として設定
  */
 export async function getRedirectUrlForUser(user: User): Promise<string> {
   const permissions = await getUserPermissionLevel(user)
-  
+
+  // ユーザーが組織に所属している場合、最初の組織を現在の組織として設定
+  if (permissions.organizations.length > 0) {
+    await setCurrentOrganizationId(permissions.organizations[0].id)
+  }
+
   // 運用担当者はOPS画面へ
   if (permissions.isOps) {
     return process.env.NEXT_PUBLIC_OPS_URL || 'http://ops.localhost:3000'
   }
-  
+
   // 管理者はADMIN画面へ
   if (permissions.isAdmin) {
     return process.env.NEXT_PUBLIC_ADMIN_URL || 'http://admin.localhost:3000'
   }
-  
+
   // 一般メンバーはAPP画面へ
   if (permissions.isMember) {
     return process.env.NEXT_PUBLIC_APP_URL || 'http://app.localhost:3000'
   }
-  
+
   // 組織に所属していない場合はオンボーディング（組織作成）へ
   return `${process.env.NEXT_PUBLIC_WWW_URL || 'http://localhost:3000'}/onboarding/create-organization`
 }
