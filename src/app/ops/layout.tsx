@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import LogoutButton from '@/components/LogoutButton'
+import SessionMonitor from '@/components/SessionMonitor'
 
 export const metadata: Metadata = {
   title: 'Operations Center - Example',
@@ -49,6 +50,9 @@ export default async function OpsLayout({
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
+      {/* セッション監視（ログアウト検知時に自動リダイレクト） */}
+      <SessionMonitor redirectTo={`${process.env.NEXT_PUBLIC_OPS_URL || 'http://ops.localhost:3000'}/login`} />
+
       {/* ヘッダー */}
       <header className="bg-gray-800 border-b border-gray-700 sticky top-0 z-50">
         <nav className="container mx-auto px-4 py-4">

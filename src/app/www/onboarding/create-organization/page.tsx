@@ -69,8 +69,8 @@ function CreateOrganizationContent() {
       setError(result.error)
       setIsLoading(false)
     } else if (result.success) {
-      // 成功時はAPPドメインへリダイレクト
-      window.location.href = process.env.NEXT_PUBLIC_APP_URL || 'http://app.localhost:3000'
+      // 成功時はADMINドメインへリダイレクト（owner権限のため）
+      window.location.href = process.env.NEXT_PUBLIC_ADMIN_URL || 'http://admin.localhost:3000'
     } else {
       setError('予期しないエラーが発生しました')
       setIsLoading(false)

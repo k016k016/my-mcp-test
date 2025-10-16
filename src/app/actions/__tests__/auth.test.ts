@@ -294,7 +294,7 @@ describe('Auth Actions', () => {
         error: null,
       })
 
-      vi.mocked(getRedirectUrlForUser).mockResolvedValue('http://localhost:3000/onboarding')
+      vi.mocked(getRedirectUrlForUser).mockResolvedValue('http://localhost:3000/onboarding/create-organization')
 
       await signIn(formData)
 
@@ -304,7 +304,7 @@ describe('Auth Actions', () => {
       })
       expect(getRedirectUrlForUser).toHaveBeenCalledWith(mockUser)
       expect(vi.mocked(nextCache.revalidatePath)).toHaveBeenCalledWith('/', 'layout')
-      expect(vi.mocked(nextNavigation.redirect)).toHaveBeenCalledWith('http://localhost:3000/onboarding')
+      expect(vi.mocked(nextNavigation.redirect)).toHaveBeenCalledWith('http://localhost:3000/onboarding/create-organization')
     })
 
     it('ログインに失敗した場合、エラーメッセージを返す', async () => {

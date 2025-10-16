@@ -45,9 +45,17 @@ Next.jsの**ルートグループ**（`(グループ名)`）を使用して、�
 
 ## 🔧 開発環境でのセットアップ
 
-### 1. hostsファイルの編集
+### 1. hostsファイルの編集（必須）
 
-ローカルでサブドメインをテストするために、`/etc/hosts`ファイルを編集します。
+⚠️ **重要**: サブドメイン間のCookie共有には、`.local.test`のような適切なドメインが必須です。
+
+**なぜ`.local.test`を使うのか**：
+- `localhost`ではサブドメイン間のCookie共有ができない（ブラウザの制限）
+- `.localhost`も一部ブラウザでCookie共有に問題がある
+- `.local.test`は開発用に推奨されるローカルドメイン
+- 環境変数`NEXT_PUBLIC_COOKIE_DOMAIN=.local.test`と連携して動作
+
+**hostsファイルの編集手順**：
 
 \`\`\`bash
 sudo nano /etc/hosts
@@ -56,26 +64,46 @@ sudo nano /etc/hosts
 以下の行を追加：
 
 \`\`\`
-127.0.0.1 localhost
-127.0.0.1 app.localhost
-127.0.0.1 admin.localhost
-127.0.0.1 ops.localhost
+127.0.0.1 local.test
+127.0.0.1 www.local.test
+127.0.0.1 app.local.test
+127.0.0.1 admin.local.test
+127.0.0.1 ops.local.test
 \`\`\`
 
 保存して終了（Ctrl+O → Enter → Ctrl+X）
 
-### 2. 開発サーバーを起動
+**注意**：
+- `local.test`のベースドメインも必ず追加すること
+- これがないと`.local.test`のCookieが正しく動作しません
+
+### 2. 環境変数の設定
+
+`.env.local`ファイルで以下を設定：
+
+\`\`\`bash
+# マルチドメイン設定
+NEXT_PUBLIC_WWW_URL=http://www.local.test:3000
+NEXT_PUBLIC_APP_URL=http://app.local.test:3000
+NEXT_PUBLIC_ADMIN_URL=http://admin.local.test:3000
+NEXT_PUBLIC_OPS_URL=http://ops.local.test:3000
+
+# Cookie共有用のドメイン設定（重要！）
+NEXT_PUBLIC_COOKIE_DOMAIN=.local.test
+\`\`\`
+
+### 3. 開発サーバーを起動
 
 \`\`\`bash
 npm run dev
 \`\`\`
 
-### 3. 各ドメインにアクセス
+### 4. 各ドメインにアクセス
 
-- **WWW**: http://localhost:3000
-- **APP**: http://app.localhost:3000
-- **ADMIN**: http://admin.localhost:3000
-- **OPS**: http://ops.localhost:3000
+- **WWW**: http://www.local.test:3000
+- **APP**: http://app.local.test:3000
+- **ADMIN**: http://admin.local.test:3000
+- **OPS**: http://ops.local.test:3000
 
 ## 🌐 本番環境でのセットアップ
 
@@ -334,8 +362,17 @@ test('APPドメインのダッシュボード', async ({ page }) => {
 ### ローカルでサブドメインが動かない
 
 - `/etc/hosts`ファイルが正しく編集されているか確認
-- ブラウザのキャッシュをクリア
+  - `local.test`のベースドメインも必須
+  - `cat /etc/hosts | grep local.test`で確認
+- `.env.local`の`NEXT_PUBLIC_COOKIE_DOMAIN=.local.test`が設定されているか確認
+- ブラウザのキャッシュとCookieをクリア
 - 開発サーバーを再起動
+
+### Cookie共有ができない
+
+- 環境変数`NEXT_PUBLIC_COOKIE_DOMAIN`が`.local.test`（先頭にドット）になっているか確認
+- `localhost`を使っていないか確認（Cookie共有不可）
+- ブラウザの開発者ツールでCookieのドメイン設定を確認
 
 ### 本番環境でドメインが表示されない
 

@@ -6,6 +6,7 @@ import { headers } from 'next/headers'
 import OrganizationSwitcher from '@/components/OrganizationSwitcher'
 import { getCurrentOrganizationId } from '@/lib/organization/current'
 import LogoutButton from '@/components/LogoutButton'
+import SessionMonitor from '@/components/SessionMonitor'
 
 export const metadata: Metadata = {
   title: 'ダッシュボード - Example App',
@@ -59,6 +60,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* セッション監視（ログアウト検知時に自動リダイレクト） */}
+      <SessionMonitor />
+
       {/* ヘッダー */}
       <header className="bg-white/80 backdrop-blur-md border-b border-white/20 shadow-sm sticky top-0 z-50">
         <nav className="container mx-auto px-6 py-4">

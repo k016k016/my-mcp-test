@@ -133,6 +133,6 @@ export async function getRedirectUrlForUser(user: User): Promise<string> {
     return process.env.NEXT_PUBLIC_APP_URL || 'http://app.localhost:3000'
   }
   
-  // 組織に所属していない場合はオンボーディングへ
-  return `${process.env.NEXT_PUBLIC_WWW_URL || 'http://localhost:3000'}/onboarding`
+  // 組織に所属していない場合はオンボーディング（組織作成）へ
+  return `${process.env.NEXT_PUBLIC_WWW_URL || 'http://localhost:3000'}/onboarding/create-organization`
 }

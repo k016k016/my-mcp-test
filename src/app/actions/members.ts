@@ -32,6 +32,8 @@ async function getRequestInfo() {
 
 /**
  * メンバーを招待
+ * - ローカル環境: メール送信なし、パスワード固定（password123）で直接ユーザー作成
+ * - Vercel環境（プレビュー・本番）: メール送信あり、招待URL経由でユーザー登録
  */
 export async function inviteMember(organizationId: string, email: string, role: OrganizationRole) {
   try {
@@ -99,45 +101,23 @@ export async function inviteMember(organizationId: string, email: string, role: 
     }
 
     // 既にメンバーかチェック
-    const { data: existingMember } = await supabase
+    const { data: existingProfile } = await supabase
       .from('profiles')
       .select('id')
       .eq('email', validatedData.email)
       .single()
 
-    if (existingMember) {
+    if (existingProfile) {
       const { data: membership } = await supabase
         .from('organization_members')
         .select('id')
         .eq('organization_id', organizationId)
-        .eq('user_id', existingMember.id)
+        .eq('user_id', existingProfile.id)
         .single()
 
       if (membership) {
         return { error: 'このユーザーは既に組織のメンバーです' }
       }
-    }
-
-    // 招待トークンを生成
-    const token = crypto.randomUUID()
-
-    // 招待を作成
-    const { data: invitation, error: inviteError } = await supabase
-      .from('invitations')
-      .insert({
-        organization_id: organizationId,
-        email: validatedData.email,
-        role: validatedData.role,
-        token,
-        invited_by: user.id,
-        status: 'pending',
-      })
-      .select()
-      .single()
-
-    if (inviteError) {
-      console.error('[inviteMember] Failed to create invitation:', inviteError)
-      return { error: '招待の作成に失敗しました。もう一度お試しください。' }
     }
 
     // 組織情報を取得
@@ -147,43 +127,154 @@ export async function inviteMember(organizationId: string, email: string, role: 
       .eq('id', organizationId)
       .single()
 
-    // 招待メールを送信
-    const inviteUrl = `${env.NEXT_PUBLIC_APP_URL}/invite/${token}`
+    // 環境別処理
+    // ローカル環境のみメール送信なし、Vercel（プレビュー・本番）はメール送信
+    const isLocal = !process.env.VERCEL && process.env.NODE_ENV === 'development'
 
-    try {
-      await sendEmail({
-        to: validatedData.email,
-        subject: `${organization?.name || '組織'}への招待`,
-        html: `
-          <h1>${organization?.name || '組織'}への招待</h1>
-          <p>あなたは${organization?.name || '組織'}に${role === 'admin' ? '管理者' : 'メンバー'}として招待されました。</p>
-          <p>以下のリンクをクリックして参加してください：</p>
-          <a href="${inviteUrl}">${inviteUrl}</a>
-          <p>この招待は7日間有効です。</p>
-        `,
+    if (isLocal) {
+      // ローカル環境: メール送信なし、直接ユーザー作成
+      console.log('[inviteMember] ローカル環境: 直接ユーザーを作成します（メール送信なし）')
+
+      // Supabase Service Role Clientを使用してユーザーを作成
+      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+      if (!serviceRoleKey) {
+        return { error: 'サービスロールキーが設定されていません' }
+      }
+
+      const { createClient: createServiceClient } = await import('@supabase/supabase-js')
+      const supabaseAdmin = createServiceClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        serviceRoleKey,
+        {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false,
+          },
+        }
+      )
+
+      // ユーザーを作成（メール確認なし、固定パスワード）
+      const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        email: validatedData.email,
+        password: 'password123', // 開発環境固定パスワード
+        email_confirm: true, // メール確認をスキップ
+        user_metadata: {
+          invited_to_org: organizationId,
+        },
       })
-    } catch (emailError) {
-      console.error('[inviteMember] Failed to send email:', emailError)
-      // メール送信失敗時は招待を削除
-      await supabase.from('invitations').delete().eq('id', invitation.id)
-      return { error: '招待メールの送信に失敗しました。もう一度お試しください。' }
+
+      if (createError || !newUser.user) {
+        console.error('[inviteMember] Failed to create user:', createError)
+        return { error: 'ユーザーの作成に失敗しました。もう一度お試しください。' }
+      }
+
+      // プロフィールは自動的にトリガーで作成されるが、念のため確認
+      await new Promise((resolve) => setTimeout(resolve, 500)) // トリガー実行を待つ
+
+      // 組織メンバーとして追加
+      const { error: memberError } = await supabase.from('organization_members').insert({
+        organization_id: organizationId,
+        user_id: newUser.user.id,
+        role: validatedData.role,
+      })
+
+      if (memberError) {
+        console.error('[inviteMember] Failed to add member:', memberError)
+        // ユーザー作成は成功したが組織への追加に失敗
+        return { error: 'メンバーの追加に失敗しました。もう一度お試しください。' }
+      }
+
+      // 監査ログを記録
+      const { ipAddress, userAgent } = await getRequestInfo()
+      await supabase.from('audit_logs').insert({
+        organization_id: organizationId,
+        user_id: user.id,
+        action: 'member.invited',
+        resource_type: 'organization_member',
+        resource_id: newUser.user.id,
+        details: {
+          email: validatedData.email,
+          role: validatedData.role,
+          method: 'direct_creation',
+          password: 'password123',
+        },
+        ip_address: ipAddress,
+        user_agent: userAgent,
+      })
+
+      revalidatePath('/', 'layout')
+      return {
+        success: true,
+        message: `${validatedData.email} を組織に追加しました。パスワードは「password123」です。`,
+        credentials: {
+          email: validatedData.email,
+          password: 'password123',
+        },
+      }
+    } else {
+      // Vercel環境（プレビュー・本番）: メール送信
+      console.log('[inviteMember] Vercel環境: 招待メールを送信します')
+
+      // 招待トークンを生成
+      const token = crypto.randomUUID()
+
+      // 招待を作成
+      const { data: invitation, error: inviteError } = await supabase
+        .from('invitations')
+        .insert({
+          organization_id: organizationId,
+          email: validatedData.email,
+          role: validatedData.role,
+          token,
+          invited_by: user.id,
+          status: 'pending',
+        })
+        .select()
+        .single()
+
+      if (inviteError) {
+        console.error('[inviteMember] Failed to create invitation:', inviteError)
+        return { error: '招待の作成に失敗しました。もう一度お試しください。' }
+      }
+
+      // 招待メールを送信
+      const inviteUrl = `${env.NEXT_PUBLIC_APP_URL}/invite/${token}`
+
+      try {
+        await sendEmail({
+          to: validatedData.email,
+          subject: `${organization?.name || '組織'}への招待`,
+          html: `
+            <h1>${organization?.name || '組織'}への招待</h1>
+            <p>あなたは${organization?.name || '組織'}に${role === 'admin' ? '管理者' : 'メンバー'}として招待されました。</p>
+            <p>以下のリンクをクリックして参加してください：</p>
+            <a href="${inviteUrl}">${inviteUrl}</a>
+            <p>この招待は7日間有効です。</p>
+          `,
+        })
+      } catch (emailError) {
+        console.error('[inviteMember] Failed to send email:', emailError)
+        // メール送信失敗時は招待を削除
+        await supabase.from('invitations').delete().eq('id', invitation.id)
+        return { error: '招待メールの送信に失敗しました。もう一度お試しください。' }
+      }
+
+      // 監査ログを記録
+      const { ipAddress, userAgent } = await getRequestInfo()
+      await supabase.from('audit_logs').insert({
+        organization_id: organizationId,
+        user_id: user.id,
+        action: 'member.invited',
+        resource_type: 'invitation',
+        resource_id: invitation.id,
+        details: { email: validatedData.email, role: validatedData.role, method: 'email_invitation' },
+        ip_address: ipAddress,
+        user_agent: userAgent,
+      })
+
+      revalidatePath('/', 'layout')
+      return { success: true, invitation }
     }
-
-    // 監査ログを記録
-    const { ipAddress, userAgent } = await getRequestInfo()
-    await supabase.from('audit_logs').insert({
-      organization_id: organizationId,
-      user_id: user.id,
-      action: 'member.invited',
-      resource_type: 'invitation',
-      resource_id: invitation.id,
-      details: { email: validatedData.email, role: validatedData.role },
-      ip_address: ipAddress,
-      user_agent: userAgent,
-    })
-
-    revalidatePath('/', 'layout')
-    return { success: true, invitation }
   } catch (error) {
     console.error('[inviteMember] Unexpected error:', error)
     return { error: '予期しないエラーが発生しました。もう一度お試しください。' }

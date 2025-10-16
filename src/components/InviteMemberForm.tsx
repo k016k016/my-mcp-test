@@ -16,12 +16,16 @@ export default function InviteMemberForm({ organizationId }: InviteMemberFormPro
   const [role, setRole] = useState<OrganizationRole>('member')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
     setSuccess(false)
+    setSuccessMessage(null)
+    setCredentials(null)
     setIsLoading(true)
 
     const result = await inviteMember(organizationId, email, role)
@@ -31,13 +35,20 @@ export default function InviteMemberForm({ organizationId }: InviteMemberFormPro
       setIsLoading(false)
     } else {
       setSuccess(true)
+      setSuccessMessage(result.message || '招待メールを送信しました')
+      if (result.credentials) {
+        setCredentials(result.credentials)
+      }
       setEmail('')
       setRole('member')
       setIsLoading(false)
-      setTimeout(() => {
-        setSuccess(false)
-        router.refresh()
-      }, 2000)
+      // 開発環境の場合は自動でリフレッシュしない（パスワードを確認できるように）
+      if (!result.credentials) {
+        setTimeout(() => {
+          setSuccess(false)
+          router.refresh()
+        }, 2000)
+      }
     }
   }
 
@@ -53,7 +64,39 @@ export default function InviteMemberForm({ organizationId }: InviteMemberFormPro
 
       {success && (
         <div className="mb-4 rounded-md bg-green-50 p-4 border border-green-200">
-          <p className="text-sm text-green-800">招待メールを送信しました</p>
+          <div className="flex items-start">
+            <svg className="h-5 w-5 text-green-400 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            <div className="flex-1">
+              <p className="text-sm text-green-800 font-medium">{successMessage}</p>
+              {credentials && (
+                <div className="mt-3 p-3 bg-white rounded border border-green-200">
+                  <p className="text-xs font-semibold text-gray-700 mb-2">ログイン情報（ローカル環境）</p>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-600">メール:</span>
+                      <code className="text-xs font-mono bg-gray-100 px-2 py-1 rounded">{credentials.email}</code>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-600">パスワード:</span>
+                      <code className="text-xs font-mono bg-gray-100 px-2 py-1 rounded">{credentials.password}</code>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setSuccess(false)
+                      setCredentials(null)
+                      router.refresh()
+                    }}
+                    className="mt-3 w-full text-xs bg-green-600 text-white py-1.5 px-3 rounded hover:bg-green-700 transition-colors"
+                  >
+                    確認しました
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

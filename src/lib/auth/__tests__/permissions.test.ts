@@ -503,7 +503,7 @@ describe('Permissions', () => {
 
       const result = await getRedirectUrlForUser(user)
 
-      expect(result).toBe('http://localhost:3000/onboarding')
+      expect(result).toBe('http://localhost:3000/onboarding/create-organization')
     })
 
     it('OPS権限が最優先される（複数の組織に所属していても）', async () => {

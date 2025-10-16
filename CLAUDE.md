@@ -104,6 +104,22 @@ npm run env:production
 
 ### 開発
 
+**前提条件**: サブドメイン間のCookie共有のため、`/etc/hosts`の設定が必須です：
+
+```bash
+# hostsファイルを編集
+sudo nano /etc/hosts
+
+# 以下を追加
+127.0.0.1 local.test
+127.0.0.1 www.local.test
+127.0.0.1 app.local.test
+127.0.0.1 admin.local.test
+127.0.0.1 ops.local.test
+```
+
+開発サーバーを起動：
+
 ```bash
 # Turbopackで開発サーバーを起動
 npm run dev
@@ -113,10 +129,14 @@ npm run dev:staging
 ```
 
 以下のURLでアプリケーションにアクセス：
-- http://localhost:3000 - マーケティングサイト
-- http://app.localhost:3000 - ユーザーアプリ
-- http://admin.localhost:3000 - 管理パネル
-- http://ops.localhost:3000 - 運用ダッシュボード
+- http://www.local.test:3000 - マーケティングサイト
+- http://app.local.test:3000 - ユーザーアプリ
+- http://admin.local.test:3000 - 管理パネル
+- http://ops.local.test:3000 - 運用ダッシュボード
+
+**重要**: `.local.test`ドメインを使う理由：
+- `localhost`ではサブドメイン間のCookie共有ができない
+- 環境変数`NEXT_PUBLIC_COOKIE_DOMAIN=.local.test`と連携して認証Cookieを共有
 
 ### ビルド
 
@@ -175,11 +195,30 @@ E2Eテストは`e2e/`ディレクトリにあります。設定：`playwright.co
 
 ### 認証フロー
 
+**サインアップフロー**:
 1. ユーザーが`(www)/signup`でサインアップ → Server Action `signUp()` → Supabaseがauth.usersエントリを作成
 2. トリガーが自動的に`profiles`テーブルにプロフィールを作成
 3. メール確認後、ユーザーはログイン可能
-4. 初回ログイン時、`(app)/onboarding/create-organization`にリダイレクトして最初の組織を作成
-5. ユーザーはその組織の`owner`になる
+4. 初回ログイン時、`(www)/onboarding/create-organization`にリダイレクトして最初の組織を作成
+5. ユーザーはその組織の`owner`（最高権限）になる
+6. 組織作成完了後、自動的に**ADMIN**ドメイン（`admin.localhost:3000`）にリダイレクト
+
+**ログインフロー**:
+1. ユーザーが`(www)/login`でログイン → Server Action `signIn()`
+2. `getRedirectUrlForUser(user)`で権限に応じたリダイレクト先を判定：
+   - OPS権限（`is_ops: true`）→ OPSドメイン
+   - 管理者権限（`owner`/`admin`）→ **ADMIN**ドメイン
+   - 一般メンバー → APPドメイン
+   - 組織未所属 → オンボーディング
+
+**ログイン済みユーザーの処理**:
+- ログイン済みの状態で`(www)/login`にアクセスした場合、Server Componentで認証チェックを行い、権限に応じたドメインに即座にリダイレクト（フォームは表示されない）
+
+**メンバー招待（環境別）**:
+- **ローカル環境**: メール送信なし、パスワード固定（`password123`）でSupabase Admin API経由で直接ユーザー作成
+- **Vercel環境**（プレビュー・本番）: 招待メールを送信し、ユーザーが自分でパスワードを設定
+
+詳細は `docs/specifications/AUTH_FLOW_SPECIFICATION.md` を参照してください。
 
 ### 組織コンテキスト
 
@@ -311,3 +350,5 @@ supabase db push
 - `docs/MULTI_DOMAIN_SETUP.md` - マルチドメインルーティングの仕組み
 - `docs/E2E_TESTING_GUIDE.md` - E2Eテストのセットアップとパターン
 - `docs/PROJECT_PROGRESS.md` - 現在の実装状況とロードマップ
+- `docs/specifications/AUTH_FLOW_SPECIFICATION.md` - 認証フロー仕様書と実装状況
+- `docs/IMPLEMENTATION_LOG.md` - 実装内容の詳細ログ（時系列）

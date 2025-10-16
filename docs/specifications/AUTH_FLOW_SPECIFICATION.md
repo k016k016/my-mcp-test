@@ -1,6 +1,6 @@
 # 認証フロー仕様書
 
-最終更新: 2025-01-15
+最終更新: 2025-01-16
 
 ## 📋 概要
 
@@ -169,6 +169,76 @@ OPSドメイン:
 
 8. **カード登録・決済をモック実装**
    - 開発用のモック決済システム
+
+### **実装状況** ✅
+
+| 項目 | ステータス | 実装日 | 備考 |
+|------|-----------|--------|------|
+| 1. OPSドメイン内ログインページ | ✅ 完了 | - | `src/app/ops/login/page.tsx` |
+| 2. ミドルウェア更新 | ✅ 完了 | - | `src/middleware.ts` |
+| 3. 権限チェック関数 | ✅ 完了 | - | `src/lib/auth/permissions.ts` |
+| 4. ログイン後の権限別リダイレクト | ✅ 完了 | 2025-01-16 | `getRedirectUrlForUser()` |
+| 5. 組織切り替え時の権限チェック | ✅ 完了 | - | `switchOrganization()` |
+| 6. OPS画面でのデータ確認機能 | ✅ 完了 | - | `src/app/ops/` |
+| 7. 招待時の権限設定機能 | ✅ 完了 | 2025-01-16 | 環境別実装（ローカル/Vercel） |
+| 8. カード登録・決済モック | ✅ 完了 | - | `src/app/www/onboarding/payment/` |
+
+#### **2025-01-16 実装内容**
+
+**1. サインアップ・ログインフローの統一**
+- ✅ サインアップ時に自動的に`owner`権限を付与
+  - 実装場所: `src/app/actions/organization.ts:102`
+  - 組織作成時に`role: 'owner'`を設定
+
+- ✅ ログイン後は権限に応じて適切なドメインにリダイレクト
+  - 実装場所: `src/app/actions/auth.ts:140`
+  - `getRedirectUrlForUser(user)`を使用
+  - owner/admin → ADMIN、member → APP、組織なし → オンボーディング
+
+- ✅ ログイン済みユーザーがWWWログインページにアクセスした場合の処理
+  - 実装場所: `src/app/www/login/page.tsx`
+  - Server Componentで認証チェックを実施
+  - ログイン済みの場合は権限に応じたドメインに即座にリダイレクト
+  - ログインフォームは`src/components/LoginForm.tsx`に分離
+
+- ✅ 組織作成後のリダイレクト先をADMINに変更
+  - 実装場所: `src/app/www/onboarding/create-organization/page.tsx:73`
+  - owner権限を持つため、管理画面（ADMIN）に遷移
+
+**2. メンバー招待機能の環境別実装**
+- ✅ ローカル環境: メール送信なし、パスワード固定（`password123`）
+  - 実装場所: `src/app/actions/members.ts`
+  - Supabase Admin APIで直接ユーザー作成
+  - UIに認証情報を表示（`src/components/InviteMemberForm.tsx`）
+
+- ✅ Vercel環境（プレビュー・本番）: メール送信あり
+  - 招待URLを送信し、ユーザーが自分でパスワードを設定
+
+**3. 権限別リダイレクトロジック**
+```typescript
+// src/lib/auth/permissions.ts:118-138
+export async function getRedirectUrlForUser(user: User): Promise<string> {
+  const permissions = await getUserPermissionLevel(user)
+
+  // 運用担当者はOPS画面へ
+  if (permissions.isOps) {
+    return process.env.NEXT_PUBLIC_OPS_URL || 'http://ops.localhost:3000'
+  }
+
+  // 管理者はADMIN画面へ
+  if (permissions.isAdmin) {
+    return process.env.NEXT_PUBLIC_ADMIN_URL || 'http://admin.localhost:3000'
+  }
+
+  // 一般メンバーはAPP画面へ
+  if (permissions.isMember) {
+    return process.env.NEXT_PUBLIC_APP_URL || 'http://app.localhost:3000'
+  }
+
+  // 組織に所属していない場合はオンボーディングへ
+  return `${process.env.NEXT_PUBLIC_WWW_URL || 'http://localhost:3000'}/onboarding/create-organization`
+}
+```
 
 ## 🔧 技術実装
 

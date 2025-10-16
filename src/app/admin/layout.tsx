@@ -6,6 +6,7 @@ import { headers } from 'next/headers'
 import OrganizationSwitcher from '@/components/OrganizationSwitcher'
 import { getCurrentOrganizationId } from '@/lib/organization/current'
 import LogoutButton from '@/components/LogoutButton'
+import SessionMonitor from '@/components/SessionMonitor'
 
 export const metadata: Metadata = {
   title: '管理画面 - Example Admin',
@@ -75,6 +76,9 @@ export default async function AdminLayout({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100">
+      {/* セッション監視（ログアウト検知時に自動リダイレクト） */}
+      <SessionMonitor />
+
       {/* サイドバー */}
       <div className="flex">
         <aside className="w-64 bg-gray-900 text-white min-h-screen shadow-xl">

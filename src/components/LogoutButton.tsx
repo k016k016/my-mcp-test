@@ -3,23 +3,27 @@
 
 import { useState } from 'react'
 import { signOut } from '@/app/actions/auth'
-import { redirectAfterLogout } from '@/app/actions/logout-redirect'
 
 export default function LogoutButton() {
   const [isLoading, setIsLoading] = useState(false)
 
   const handleLogout = async () => {
+    // 既にリダイレクト中の場合は何もしない
+    if (typeof window !== 'undefined' && sessionStorage.getItem('logout-redirecting') === 'true') {
+      console.log('[LogoutButton] 既にログアウト処理中です')
+      return
+    }
+
     setIsLoading(true)
     try {
       // ログアウト処理
+      // SessionMonitorが自動的にリダイレクトするため、ここではリダイレクトしない
       const result = await signOut()
-      if (result?.success) {
-        // ログアウト成功後、適切なページにリダイレクト
-        await redirectAfterLogout()
-      } else {
+      if (result?.error) {
         console.error('Logout failed:', result?.error)
         setIsLoading(false)
       }
+      // 成功時はSessionMonitorが自動的にログインページにリダイレクト
     } catch (error) {
       console.error('Logout error:', error)
       setIsLoading(false)
