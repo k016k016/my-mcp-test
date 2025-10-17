@@ -39,7 +39,7 @@ test.describe('認証フロー', () => {
     await submitButton.click()
 
     // ✅ ADMINドメインにリダイレクト
-    await expect(page).toHaveURL(/admin\.localhost/, { timeout: 10000 })
+    await expect(page).toHaveURL(/admin\.local\.test/, { timeout: 10000 })
 
     // ✅ 自分がownerであることを確認（メンバー一覧で「オーナー」バッジ）
     await page.goto(`${DOMAINS.ADMIN}/members`)
@@ -57,7 +57,7 @@ test.describe('認証フロー', () => {
     await page.click('button[type="submit"]:has-text("ログイン")')
 
     // ✅ ADMINドメインにリダイレクト
-    await expect(page).toHaveURL(/admin\.localhost/, { timeout: 10000 })
+    await expect(page).toHaveURL(/admin\.local\.test/, { timeout: 10000 })
   })
 
   // 3. ログイン成功（Member → APP）
@@ -70,7 +70,7 @@ test.describe('認証フロー', () => {
     await page.click('button[type="submit"]:has-text("ログイン")')
 
     // ✅ APPドメインにリダイレクト
-    await expect(page).toHaveURL(/app\.localhost/, { timeout: 10000 })
+    await expect(page).toHaveURL(/app\.local\.test/, { timeout: 10000 })
   })
 
   // 4. ログイン失敗
@@ -94,12 +94,12 @@ test.describe('認証フロー', () => {
     await page.fill('input[name="email"]', 'owner@example.com')
     await page.fill('input[name="password"]', 'password123')
     await page.click('button[type="submit"]:has-text("ログイン")')
-    await page.waitForURL(/admin\.localhost/, { timeout: 10000 })
+    await page.waitForURL(/admin\.local\.test/, { timeout: 10000 })
 
     // ログアウト
     await page.click('button:has-text("ログアウト")')
 
     // ✅ WWWドメインにリダイレクト
-    await expect(page).toHaveURL(/^http:\/\/localhost:3000/, { timeout: 5000 })
+    await expect(page).toHaveURL(/^http:\/\/www\.local\.test:3000/, { timeout: 5000 })
   })
 })

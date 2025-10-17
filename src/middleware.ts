@@ -128,7 +128,7 @@ export async function middleware(request: NextRequest) {
       
       // current_organization_id クッキーが未設定の場合は、ユーザーの最初の組織を後段で設定
       const hasOrgCookie = request.cookies.get('current_organization_id')?.value
-      if (!hasOrgCookie) {
+      if (!hasOrgCookie && user) {
         const { data: memberships } = await supabase
           .from('organization_members')
           .select('organization_id')
