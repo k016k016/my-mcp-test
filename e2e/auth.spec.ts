@@ -24,8 +24,8 @@ test.describe('認証フロー', () => {
 
     await page.click('button[type="submit"]:has-text("無料でアカウントを作成")')
 
-    // ✅ 支払いページに到達
-    await expect(page).toHaveURL(/\/onboarding\/payment/, { timeout: 10000 })
+    // ✅ プラン選択ページに到達
+    await expect(page).toHaveURL(/\/onboarding\/select-plan/, { timeout: 10000 })
 
     // ✅ 組織が作成されていることを確認（ページに組織名が表示される）
     await expect(page.locator(`text=${companyName}`).first()).toBeVisible({ timeout: 5000 })
@@ -49,11 +49,11 @@ test.describe('認証フロー', () => {
 
   // 2. ログイン成功（Owner → ADMIN）
   test('owner権限ユーザー → ADMINドメインにリダイレクト', async ({ page }) => {
-    // 前提: owner@example.com (password: password123) が存在すること
+    // 前提: owner@example.com (password: OwnerPassword123!) が存在すること
     await page.goto(`${DOMAINS.WWW}/login`)
 
     await page.fill('input[name="email"]', 'owner@example.com')
-    await page.fill('input[name="password"]', 'password123')
+    await page.fill('input[name="password"]', 'OwnerPassword123!')
     await page.click('button[type="submit"]:has-text("ログイン")')
 
     // ✅ ADMINドメインにリダイレクト
@@ -62,11 +62,11 @@ test.describe('認証フロー', () => {
 
   // 3. ログイン成功（Member → APP）
   test('member権限ユーザー → APPドメインにリダイレクト', async ({ page }) => {
-    // 前提: member@example.com (password: password123) が存在すること
+    // 前提: member@example.com (password: MemberPassword123!) が存在すること
     await page.goto(`${DOMAINS.WWW}/login`)
 
     await page.fill('input[name="email"]', 'member@example.com')
-    await page.fill('input[name="password"]', 'password123')
+    await page.fill('input[name="password"]', 'MemberPassword123!')
     await page.click('button[type="submit"]:has-text("ログイン")')
 
     // ✅ APPドメインにリダイレクト
@@ -92,7 +92,7 @@ test.describe('認証フロー', () => {
     // ログイン
     await page.goto(`${DOMAINS.WWW}/login`)
     await page.fill('input[name="email"]', 'owner@example.com')
-    await page.fill('input[name="password"]', 'password123')
+    await page.fill('input[name="password"]', 'OwnerPassword123!')
     await page.click('button[type="submit"]:has-text("ログイン")')
     await page.waitForURL(/admin\.local\.test/, { timeout: 10000 })
 
