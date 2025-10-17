@@ -51,12 +51,22 @@ export default async function MembersPage() {
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
 
-  // 組織情報を取得
+  // 組織情報を取得（サブスクリプションプランも含む）
   const { data: organization } = await supabase
     .from('organizations')
-    .select('name')
+    .select('name, subscription_plan')
     .eq('id', organizationId)
     .single()
+
+  // 現在のプランの上限を取得
+  const { data: usageLimit } = await supabase
+    .from('usage_limits')
+    .select('max_members')
+    .eq('plan', organization?.subscription_plan || 'free')
+    .single()
+
+  const currentMemberCount = members?.length || 0
+  const maxMembers = usageLimit?.max_members || 3
 
   // ロールの日本語表示
   const getRoleLabel = (role: string) => {
@@ -66,7 +76,7 @@ export default async function MembersPage() {
       case 'admin':
         return '管理者'
       case 'member':
-        return 'メンバー'
+        return 'ユーザー'
       default:
         return role
     }
@@ -183,7 +193,11 @@ export default async function MembersPage() {
 
         {/* メンバー招待フォーム */}
         <div className="lg:col-span-1">
-          <InviteMemberForm organizationId={organizationId} />
+          <InviteMemberForm
+            organizationId={organizationId}
+            currentMemberCount={currentMemberCount}
+            maxMembers={maxMembers}
+          />
         </div>
       </div>
     </div>

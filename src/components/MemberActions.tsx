@@ -54,17 +54,16 @@ export default function MemberActions({
 
   return (
     <div className="flex items-center gap-2">
-      {/* ロール変更ドロップダウン */}
+      {/* ロール変更ドロップダウン（管理者とユーザーのみ選択可能） */}
       {!isOwner && (
         <select
           value={currentRole}
           onChange={(e) => handleRoleChange(e.target.value as OrganizationRole)}
           disabled={isLoading}
-          className="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+          className="text-gray-900 text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
         >
-          <option value="member">メンバー</option>
+          <option value="member">ユーザー</option>
           <option value="admin">管理者</option>
-          <option value="owner">オーナー</option>
         </select>
       )}
 
@@ -73,14 +72,27 @@ export default function MemberActions({
         <button
           onClick={() => setShowDeleteConfirm(true)}
           disabled={isLoading}
-          className="text-sm text-red-600 hover:text-red-800 font-medium transition-colors disabled:opacity-50"
+          // className="text-sm bg-red-800 text-red-100 hover:text-red-800 font-medium transition-colors disabled:opacity-50"
+          className="
+            ml-2
+            rounded-md       // 角を丸くする
+            bg-red-600       // 少し明るい赤に変更
+            px-2 py-1        // 内側の余白（padding）を追加
+            text-sm font-semibold text-white // テキストを白＆少し太字に
+            shadow-sm        // わずかな影を追加
+            hover:bg-red-500 // ホバー時にもう少し明るく
+            focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 // アクセシビリティ対応
+            transition-colors  // 色の変化を滑らかに
+            disabled:opacity-50 // disabled時のスタイルは維持
+            disabled:pointer-events-none // disabled時はクリックイベントを無効に
+          "
         >
           削除
         </button>
       )}
 
       {isOwner && (
-        <span className="text-sm text-gray-400">-</span>
+        <span className="text-sm text-gray-600">-</span>
       )}
 
       {/* 削除確認ダイアログ */}

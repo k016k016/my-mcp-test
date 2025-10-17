@@ -28,7 +28,6 @@ export interface Organization {
   // サブスクリプション情報
   subscription_plan: SubscriptionPlan
   subscription_status: SubscriptionStatus
-  trial_ends_at: string | null
   subscription_ends_at: string | null
 
   // Chargebee関連

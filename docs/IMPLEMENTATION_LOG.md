@@ -700,6 +700,328 @@ export default function MemberActions({
 
 ---
 
+## 2025-01-17: APP/ADMIN/OPSドメインの役割分離とUI刷新
+
+### 📌 実装の背景
+
+APPとADMINドメインの役割が曖昧で、機能が重複していた問題を解決するため、各ドメインの責務を明確に分離しました。また、UIの視認性の問題（白背景に白文字など）も同時に修正しました。
+
+**問題点**:
+- APPドメインに組織管理機能があり、ADMINドメインっぽい
+- ADMINドメインにシステム全体の統計があり、OPSドメインの機能が混在
+- 白背景に白文字、黒背景に黒文字で見えない箇所が存在
+
+**目指すアーキテクチャ**:
+- **APP**: 一般ユーザー向けのシンプルなダッシュボードと個人設定のみ
+- **ADMIN**: 組織管理者向けの組織管理機能（メンバー、設定、サブスクリプション）
+- **OPS**: システム管理者向けの全組織・全ユーザー管理（既存のまま）
+
+### 🎯 実装内容
+
+#### 1. APPドメインの簡素化
+
+**削除したディレクトリ**:
+- `src/app/app/settings/members/` - メンバー管理（ADMIN機能）
+- `src/app/app/settings/organization/` - 組織設定（ADMIN機能）
+- `src/app/app/settings/subscription/` - サブスクリプション管理（ADMIN機能）
+
+**ファイル**: `src/app/app/page.tsx`
+
+```typescript
+// シンプルなユーザーダッシュボードに変更
+// ウェルカムカード
+<div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+  {/* あなたの組織 */}
+  <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+    <h3 className="text-lg font-semibold text-gray-900">あなたの組織</h3>
+    <p className="text-3xl font-bold text-gray-900 mb-2">{currentOrg.name}</p>
+    <p className="text-sm text-gray-600">プラン: {currentOrg.subscription_plan}</p>
+  </div>
+
+  {/* あなたのロール */}
+  <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+    <h3 className="text-lg font-semibold text-gray-900">あなたのロール</h3>
+    <p className="text-3xl font-bold text-gray-900 mb-2">
+      {currentMembership.role === 'owner' ? 'オーナー' :
+       currentMembership.role === 'admin' ? '管理者' : 'ユーザー'}
+    </p>
+  </div>
+
+  {/* クイックアクション */}
+  <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+    <a href="/settings/profile">→ プロフィール設定</a>
+    {(role === 'owner' || role === 'admin') && (
+      <a href={ADMIN_URL}>→ 管理画面へ</a>
+    )}
+  </div>
+</div>
+```
+
+**変更点**:
+- 複雑なプロジェクト・タスク表示を削除
+- シンプルな3カードレイアウトに変更
+- 明るく親しみやすいデザイン（白背景、視認性の高い文字色）
+- trial_ends_atへの参照を削除
+
+#### 2. ADMINドメインの再構成
+
+**削除したファイル**:
+- `src/app/admin/organizations/page.tsx` - 全組織一覧（OPS機能）
+- `src/app/admin/users/page.tsx` - 全ユーザー一覧（OPS機能）
+
+**ファイル**: `src/app/admin/page.tsx`
+
+変更前: システム全体の統計（全ユーザー数、全組織数）
+```typescript
+// 全ユーザー数を取得
+const { count: totalUsers } = await supabase
+  .from('profiles')
+  .select('*', { count: 'exact', head: true })
+
+// 全組織数を取得
+const { count: totalOrganizations } = await supabase
+  .from('organizations')
+  .select('*', { count: 'exact', head: true })
+```
+
+変更後: 自組織のみの統計
+```typescript
+// 現在の組織IDを取得
+const organizationId = await getCurrentOrganizationId()
+
+// 自組織のメンバー数を取得
+const { count: membersCount } = await supabase
+  .from('organization_members')
+  .select('*', { count: 'exact', head: true })
+  .eq('organization_id', organizationId)
+  .is('deleted_at', null)
+
+// 自組織の最近のメンバーを取得
+const { data: recentMembers } = await supabase
+  .from('organization_members')
+  .select('...')
+  .eq('organization_id', organizationId)
+  .is('deleted_at', null)
+```
+
+**新規ページ**: `src/app/admin/settings/page.tsx`
+
+組織設定ページを作成:
+```typescript
+export default async function OrganizationSettingsPage() {
+  // 権限チェック（オーナーまたは管理者）
+  const isAdmin = currentMember?.role === 'owner' || currentMember?.role === 'admin'
+
+  // 組織情報を取得
+  const { data: organization } = await supabase
+    .from('organizations')
+    .select('*')
+    .eq('id', organizationId)
+    .single()
+
+  return <OrganizationSettingsForm organization={organization} />
+}
+```
+
+**新規コンポーネント**: `src/components/OrganizationSettingsForm.tsx`
+
+組織名とスラッグの編集機能:
+```typescript
+export default function OrganizationSettingsForm({ organization }) {
+  async function handleSubmit(e: React.FormEvent) {
+    const result = await updateOrganization(organization.id, formData)
+    // ...
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input value={name} onChange={(e) => setName(e.target.value)} />
+      <input value={slug} onChange={(e) => setSlug(e.target.value)} />
+      <button type="submit">変更を保存</button>
+    </form>
+  )
+}
+```
+
+**新規ページ**: `src/app/admin/subscription/page.tsx`
+
+サブスクリプション管理ページ:
+```typescript
+export default async function SubscriptionPage() {
+  // 権限チェック（オーナーのみ）
+  const isOwner = currentMember?.role === 'owner'
+
+  // 使用量制限と現在の使用量を取得
+  const { data: usageLimit } = await supabase
+    .from('usage_limits')
+    .select('*')
+    .eq('plan', organization?.subscription_plan || 'free')
+
+  const { count: membersCount } = await supabase
+    .from('organization_members')
+    .select('*', { count: 'exact', head: true })
+    .eq('organization_id', organizationId)
+
+  // プラン一覧とアップグレードボタンを表示
+  return (
+    <div>
+      <SubscriptionCard organization={organization} />
+      {/* 使用量の詳細 */}
+      {/* 利用可能なプラン（Free/Standard/Enterprise） */}
+    </div>
+  )
+}
+```
+
+#### 3. プロフィールページの拡張
+
+**ファイル**: `src/app/app/settings/profile/page.tsx`
+
+**追加機能1: パスワード変更**
+```typescript
+async function handlePasswordChange(e: React.FormEvent) {
+  // バリデーション
+  if (newPassword !== confirmPassword) {
+    setPasswordMessage({ type: 'error', text: '新しいパスワードが一致しません' })
+    return
+  }
+
+  if (newPassword.length < 8) {
+    setPasswordMessage({ type: 'error', text: 'パスワードは8文字以上にしてください' })
+    return
+  }
+
+  // Supabaseのパスワード変更
+  const { error } = await supabase.auth.updateUser({
+    password: newPassword
+  })
+
+  if (!error) {
+    setPasswordMessage({ type: 'success', text: 'パスワードを変更しました' })
+  }
+}
+```
+
+**追加機能2: 組織と権限の表示**
+```typescript
+async function loadOrganizations() {
+  const { data: memberships } = await supabase
+    .from('organization_members')
+    .select(`
+      role,
+      organization:organizations (id, name)
+    `)
+    .eq('user_id', user.id)
+    .is('deleted_at', null)
+
+  setOrganizations(memberships)
+}
+
+// UI表示
+{organizations.map((membership) => (
+  <div key={membership.organization.id}>
+    <h3>{membership.organization.name}</h3>
+    <span className={getRoleBadgeColor(membership.role)}>
+      {getRoleLabel(membership.role)}
+    </span>
+  </div>
+))}
+```
+
+**UIの改善**:
+- 3つのセクションに分割（基本情報、パスワード変更、組織と権限）
+- 視認性の高い配色（白背景にグレー/ブラック文字）
+- グラデーションボタンでアクセントを追加
+
+#### 4. 視認性の改善
+
+既存のコンポーネントで視認性の問題を修正（前回実装済み）:
+
+**ファイル**: `src/components/InviteMemberForm.tsx`
+```typescript
+// 変更前: 背景色なし（継承により白背景に白文字になる可能性）
+<div className="rounded-lg shadow p-6">
+
+// 変更後: 明示的に背景と文字色を指定
+<div className="bg-white text-gray-900 rounded-lg shadow p-6">
+```
+
+**ファイル**: `src/components/MemberActions.tsx`
+```typescript
+// 変更前: text-gray-400（薄くて見えにくい）
+className="text-gray-400"
+
+// 変更後: text-gray-600（視認性向上）
+className="text-gray-600"
+
+// ドロップダウンにも明示的な色指定
+className="text-gray-900 text-sm border border-gray-300 rounded px-2 py-1..."
+```
+
+### 📁 変更ファイル一覧
+
+| ファイル | 変更内容 | タイプ |
+|---------|---------|--------|
+| `src/app/app/settings/members/` | ディレクトリ削除（ADMIN機能のため） | 削除 |
+| `src/app/app/settings/organization/` | ディレクトリ削除（ADMIN機能のため） | 削除 |
+| `src/app/app/settings/subscription/` | ディレクトリ削除（ADMIN機能のため） | 削除 |
+| `src/app/app/page.tsx` | シンプルなユーザーダッシュボードに変更 | 変更 |
+| `src/app/admin/organizations/page.tsx` | 削除（OPS機能のため） | 削除 |
+| `src/app/admin/users/page.tsx` | 削除（OPS機能のため） | 削除 |
+| `src/app/admin/page.tsx` | システム全体統計→自組織統計に変更 | 変更 |
+| `src/app/admin/settings/page.tsx` | 組織設定ページ | 新規 |
+| `src/components/OrganizationSettingsForm.tsx` | 組織設定フォームコンポーネント | 新規 |
+| `src/app/admin/subscription/page.tsx` | サブスクリプション管理ページ | 新規 |
+| `src/app/app/settings/profile/page.tsx` | パスワード変更と権限表示を追加 | 変更 |
+
+### 🎨 ドメイン別デザイン方針
+
+| ドメイン | 対象ユーザー | デザインコンセプト | 配色 |
+|---------|------------|-----------------|------|
+| **APP** | 一般ユーザー | シンプル、親しみやすい、明るい | 白背景、明るいグラデーション |
+| **ADMIN** | 組織管理者 | プロフェッショナル、ビジネスライク | 白/グレー背景、統一感のあるカラー |
+| **OPS** | システム管理者 | ターミナル風、技術的 | ダークモード（既存のまま） |
+
+### ✅ テスト項目
+
+- [x] APPダッシュボードがシンプルなカードレイアウトで表示される
+- [x] APPから組織管理機能が削除されている
+- [x] ADMINダッシュボードに自組織の統計が表示される
+- [x] ADMIN設定ページで組織情報を編集できる
+- [x] ADMINサブスクリプションページで使用量とプランが確認できる
+- [x] プロフィールページでパスワードが変更できる
+- [x] プロフィールページで所属組織と権限が表示される
+- [x] 視認性の問題（白背景白文字）が修正されている
+
+### 🔄 ドメイン役割の整理
+
+```
+【APP】一般ユーザー向け
+- ダッシュボード（組織情報、ロール表示、クイックアクション）
+- プロフィール設定（個人情報、パスワード変更、権限確認）
+- ※組織管理機能なし
+
+【ADMIN】組織管理者向け（owner/admin権限）
+- ダッシュボード（自組織の統計）
+- メンバー管理（招待、ロール変更、削除）
+- 組織設定（組織名、スラッグ編集）
+- サブスクリプション管理（プラン、使用量）
+- ※自組織のみ管理可能
+
+【OPS】システム管理者向け（is_ops: true）
+- 全組織一覧
+- 全ユーザー一覧
+- システム全体の管理
+- ※既存機能そのまま
+```
+
+### 🔗 関連リンク
+
+- ドメインアーキテクチャ仕様: `docs/specifications/DOMAIN_ARCHITECTURE_SPECIFICATION.md`（新規作成予定）
+- マルチドメイン設定: `docs/specifications/MULTI_DOMAIN_SETUP.md`
+
+---
+
 ## テンプレート（次回の実装記録用）
 
 ```markdown

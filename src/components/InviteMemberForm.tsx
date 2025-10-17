@@ -8,9 +8,11 @@ import type { OrganizationRole } from '@/types/database'
 
 interface InviteMemberFormProps {
   organizationId: string
+  currentMemberCount: number
+  maxMembers: number
 }
 
-export default function InviteMemberForm({ organizationId }: InviteMemberFormProps) {
+export default function InviteMemberForm({ organizationId, currentMemberCount, maxMembers }: InviteMemberFormProps) {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<OrganizationRole>('member')
@@ -52,9 +54,28 @@ export default function InviteMemberForm({ organizationId }: InviteMemberFormPro
     }
   }
 
+  // 上限チェック（-1は無制限）
+  const isAtLimit = maxMembers !== -1 && currentMemberCount >= maxMembers
+  const canInvite = !isAtLimit
+
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div className="bg-white text-gray-900 rounded-lg shadow p-6">
       <h2 className="text-lg font-bold mb-4">メンバーを招待</h2>
+
+      {/* メンバー数表示 */}
+      <div className="mb-4 p-3 bg-gray-50 rounded-md border border-gray-200">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-gray-700">現在のメンバー数</span>
+          <span className="text-sm font-semibold text-gray-900">
+            {currentMemberCount} / {maxMembers === -1 ? '無制限' : maxMembers}
+          </span>
+        </div>
+        {isAtLimit && (
+          <p className="mt-2 text-xs text-red-600">
+            メンバー数が上限に達しています。プランをアップグレードするか、既存メンバーを削除してください。
+          </p>
+        )}
+      </div>
 
       {error && (
         <div className="mb-4 rounded-md bg-red-50 p-4 border border-red-200">
@@ -126,20 +147,20 @@ export default function InviteMemberForm({ organizationId }: InviteMemberFormPro
             onChange={(e) => setRole(e.target.value as OrganizationRole)}
             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
           >
-            <option value="member">メンバー</option>
+            <option value="member">ユーザー</option>
             <option value="admin">管理者</option>
           </select>
           <p className="mt-1 text-xs text-gray-500">
-            管理者はメンバーの招待・削除ができます
+            管理者はオーナーのお金関係以外の操作（メンバーの招待・削除など）ができます
           </p>
         </div>
 
         <button
           type="submit"
-          disabled={isLoading}
+          disabled={isLoading || !canInvite}
           className="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isLoading ? '送信中...' : '招待を送信'}
+          {isLoading ? '送信中...' : !canInvite ? 'メンバー数が上限です' : '招待を送信'}
         </button>
       </form>
     </div>

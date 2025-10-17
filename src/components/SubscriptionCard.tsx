@@ -73,11 +73,6 @@ export default function SubscriptionCard({
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl font-bold">{getPlanName(organization.subscription_plan)}</h2>
-            <p className="text-gray-600 mt-1">
-              {organization.subscription_status === 'trialing' &&
-                organization.trial_ends_at &&
-                `トライアル終了: ${new Date(organization.trial_ends_at).toLocaleDateString('ja-JP')}`}
-            </p>
           </div>
           {getStatusBadge(organization.subscription_status)}
         </div>

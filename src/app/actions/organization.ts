@@ -84,8 +84,7 @@ export async function createOrganization(input: CreateOrganizationInput | FormDa
         name: validatedData.name,
         slug: validatedData.slug,
         subscription_plan: 'free',
-        subscription_status: 'trialing',
-        trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(), // 14日間のトライアル
+        subscription_status: 'active',
       })
       .select()
       .single()
