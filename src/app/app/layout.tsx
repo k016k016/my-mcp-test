@@ -52,6 +52,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     // Cookieの設定はServer Actionで行う必要があるため、ここでは設定しない
   }
 
+  // 現在の組織でのロールを取得
+  const currentMembership = memberships?.find(
+    (m: any) => m.organization && 'id' in m.organization && m.organization.id === currentOrgId
+  )
+  const isAdmin = currentMembership?.role === 'owner' || currentMembership?.role === 'admin'
+
   // プロフィール情報を取得
   const { data: profile } = await supabase
     .from('profiles')
@@ -90,17 +96,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                   ダッシュボード
                 </a>
                 <a
-                  href="/projects"
+                  href="/settings/profile"
                   className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                 >
-                  プロジェクト
+                  プロフィール設定
                 </a>
-                <a
-                  href="/settings"
-                  className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                >
-                  設定
-                </a>
+                {isAdmin && (
+                  <a
+                    href={process.env.NEXT_PUBLIC_ADMIN_URL || 'http://admin.localhost:3000'}
+                    className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  >
+                    管理画面
+                  </a>
+                )}
               </div>
             </div>
 
