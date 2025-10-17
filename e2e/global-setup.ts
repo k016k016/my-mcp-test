@@ -18,8 +18,11 @@ async function globalSetup() {
     // Supabase Admin Clientを取得
     const supabase = createAdminClient()
 
+    // 共通パスワード（テスト用）
+    const TEST_PASSWORD = 'test1234'
+
     // OPS権限ユーザー
-    const opsUser = await createTestUser('ops@example.com', 'OpsPassword123!', {
+    const opsUser = await createTestUser('ops@example.com', TEST_PASSWORD, {
       companyName: 'OPS Company',
       contactName: 'OPS User',
     })
@@ -27,7 +30,7 @@ async function globalSetup() {
     await supabase.from('profiles').update({ is_ops: true }).eq('id', opsUser.id)
 
     // 管理者ユーザー
-    const adminUser = await createTestUser('admin@example.com', 'AdminPassword123!', {
+    const adminUser = await createTestUser('admin@example.com', TEST_PASSWORD, {
       companyName: 'Admin Company',
       contactName: 'Admin User',
     })
@@ -41,14 +44,14 @@ async function globalSetup() {
       .eq('organization_id', adminOrg.id)
 
     // オーナーユーザー
-    const ownerUser = await createTestUser('owner@example.com', 'OwnerPassword123!', {
+    const ownerUser = await createTestUser('owner@example.com', TEST_PASSWORD, {
       companyName: 'Owner Company',
       contactName: 'Owner User',
     })
     await createTestOrganization(ownerUser.id, 'Owner Organization', 'owner-org')
 
     // 一般メンバーユーザー
-    const memberUser = await createTestUser('member@example.com', 'MemberPassword123!', {
+    const memberUser = await createTestUser('member@example.com', TEST_PASSWORD, {
       companyName: 'Member Company',
       contactName: 'Member User',
     })
@@ -62,7 +65,7 @@ async function globalSetup() {
       .eq('organization_id', memberOrg.id)
 
     // 組織未所属ユーザー
-    await createTestUser('noorg@example.com', 'NoOrgPassword123!', {
+    await createTestUser('noorg@example.com', TEST_PASSWORD, {
       companyName: 'No Org Company',
       contactName: 'No Org User',
     })

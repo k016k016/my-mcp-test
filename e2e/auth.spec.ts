@@ -7,6 +7,9 @@ const DOMAINS = {
   ADMIN: 'http://admin.local.test:3000',
 }
 
+// テスト用の共通パスワード
+const TEST_PASSWORD = 'test1234'
+
 test.describe('認証フロー', () => {
   // 1. サインアップ完全フロー
   test('サインアップ → owner権限で組織作成 → 支払いページへ', async ({ page }) => {
@@ -49,11 +52,11 @@ test.describe('認証フロー', () => {
 
   // 2. ログイン成功（Owner → ADMIN）
   test('owner権限ユーザー → ADMINドメインにリダイレクト', async ({ page }) => {
-    // 前提: owner@example.com (password: OwnerPassword123!) が存在すること
+    // 前提: owner@example.com が存在すること
     await page.goto(`${DOMAINS.WWW}/login`)
 
     await page.fill('input[name="email"]', 'owner@example.com')
-    await page.fill('input[name="password"]', 'OwnerPassword123!')
+    await page.fill('input[name="password"]', TEST_PASSWORD)
     await page.click('button[type="submit"]:has-text("ログイン")')
 
     // ✅ ADMINドメインにリダイレクト
@@ -62,11 +65,11 @@ test.describe('認証フロー', () => {
 
   // 3. ログイン成功（Member → APP）
   test('member権限ユーザー → APPドメインにリダイレクト', async ({ page }) => {
-    // 前提: member@example.com (password: MemberPassword123!) が存在すること
+    // 前提: member@example.com が存在すること
     await page.goto(`${DOMAINS.WWW}/login`)
 
     await page.fill('input[name="email"]', 'member@example.com')
-    await page.fill('input[name="password"]', 'MemberPassword123!')
+    await page.fill('input[name="password"]', TEST_PASSWORD)
     await page.click('button[type="submit"]:has-text("ログイン")')
 
     // ✅ APPドメインにリダイレクト
@@ -92,7 +95,7 @@ test.describe('認証フロー', () => {
     // ログイン
     await page.goto(`${DOMAINS.WWW}/login`)
     await page.fill('input[name="email"]', 'owner@example.com')
-    await page.fill('input[name="password"]', 'OwnerPassword123!')
+    await page.fill('input[name="password"]', TEST_PASSWORD)
     await page.click('button[type="submit"]:has-text("ログイン")')
     await page.waitForURL(/admin\.local\.test/, { timeout: 10000 })
 
