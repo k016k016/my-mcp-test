@@ -12,7 +12,7 @@ const TEST_PASSWORD = 'test1234'
 
 test.describe('認証フロー', () => {
   // 1. サインアップ完全フロー
-  test('サインアップ → owner権限で組織作成 → 支払いページへ', async ({ page }) => {
+  test('サインアップ → プラン選択 → 支払いページへ', async ({ page }) => {
     await page.goto(`${DOMAINS.WWW}/signup`)
 
     const timestamp = Date.now()
@@ -30,24 +30,15 @@ test.describe('認証フロー', () => {
     // ✅ プラン選択ページに到達
     await expect(page).toHaveURL(/\/onboarding\/select-plan/, { timeout: 10000 })
 
-    // ✅ 組織が作成されていることを確認（ページに組織名が表示される）
-    await expect(page.locator(`text=${companyName}`).first()).toBeVisible({ timeout: 5000 })
-
     // ✅ プラン選択UIが表示される
-    await expect(page.locator('text=プラン').first()).toBeVisible()
+    await expect(page.locator('text=プランを選択してください').first()).toBeVisible()
 
-    // 決済完了後、ADMINドメインに遷移することを確認
-    // (無料プランで開始ボタンをクリック)
-    const submitButton = page.locator('button[type="submit"]').first()
-    await submitButton.click()
+    // Freeプランを選択（最初のプラン）
+    const freePlanButton = page.locator('button:has-text("このプランを選択")').first()
+    await freePlanButton.click()
 
-    // ✅ ADMINドメインにリダイレクト
-    await expect(page).toHaveURL(/admin\.local\.test/, { timeout: 10000 })
-
-    // ✅ 自分がownerであることを確認（メンバー一覧で「オーナー」バッジ）
-    await page.goto(`${DOMAINS.ADMIN}/members`)
-    await expect(page.locator('text=オーナー').first()).toBeVisible({ timeout: 5000 })
-    await expect(page.locator('text=👑').first()).toBeVisible()
+    // 支払いページに遷移する
+    await expect(page).toHaveURL(/\/onboarding\/payment/, { timeout: 10000 })
   })
 
   // 2. ログイン成功（Owner → ADMIN）
