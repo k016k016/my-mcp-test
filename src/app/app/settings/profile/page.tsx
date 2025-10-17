@@ -11,8 +11,6 @@ export default function ProfilePage() {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [companyName, setCompanyName] = useState('')
-  const [contactName, setContactName] = useState('')
-  const [avatarUrl, setAvatarUrl] = useState('')
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -42,8 +40,6 @@ export default function ProfilePage() {
       setFullName(profile.full_name || '')
       setEmail(profile.email || '')
       setCompanyName(profile.company_name || '')
-      setContactName(profile.name || '')
-      setAvatarUrl(profile.avatar_url || '')
     }
     setLoading(false)
   }
@@ -82,8 +78,6 @@ export default function ProfilePage() {
       .update({
         full_name: fullName,
         company_name: companyName,
-        name: contactName,
-        avatar_url: avatarUrl,
       })
       .eq('id', user.id)
 
@@ -229,37 +223,6 @@ export default function ProfilePage() {
               className="block w-full px-4 py-3 text-gray-900 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               placeholder="株式会社サンプル"
             />
-          </div>
-
-          <div>
-            <label htmlFor="contactName" className="block text-sm font-semibold text-gray-900 mb-2">
-              担当者名
-            </label>
-            <input
-              id="contactName"
-              type="text"
-              value={contactName}
-              onChange={(e) => setContactName(e.target.value)}
-              className="block w-full px-4 py-3 text-gray-900 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              placeholder="山田 太郎"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="avatarUrl" className="block text-sm font-semibold text-gray-900 mb-2">
-              アバターURL
-            </label>
-            <input
-              id="avatarUrl"
-              type="url"
-              value={avatarUrl}
-              onChange={(e) => setAvatarUrl(e.target.value)}
-              className="block w-full px-4 py-3 text-gray-900 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              placeholder="https://example.com/avatar.jpg"
-            />
-            <p className="mt-2 text-xs text-gray-600">
-              プロフィール画像のURLを入力してください
-            </p>
           </div>
 
           <div className="pt-4">

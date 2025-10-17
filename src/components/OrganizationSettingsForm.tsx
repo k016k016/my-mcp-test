@@ -13,7 +13,6 @@ interface OrganizationSettingsFormProps {
 export default function OrganizationSettingsForm({ organization }: OrganizationSettingsFormProps) {
   const router = useRouter()
   const [name, setName] = useState(organization.name)
-  const [slug, setSlug] = useState(organization.slug)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -26,7 +25,6 @@ export default function OrganizationSettingsForm({ organization }: OrganizationS
 
     const formData = new FormData()
     formData.append('name', name)
-    formData.append('slug', slug)
 
     const result = await updateOrganization(organization.id, formData)
 
@@ -78,24 +76,6 @@ export default function OrganizationSettingsForm({ organization }: OrganizationS
             className="block w-full px-4 py-3 text-gray-900 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             placeholder="株式会社サンプル"
           />
-        </div>
-
-        <div>
-          <label htmlFor="slug" className="block text-sm font-semibold text-gray-900 mb-2">
-            組織スラッグ
-          </label>
-          <input
-            id="slug"
-            type="text"
-            required
-            value={slug}
-            onChange={(e) => setSlug(e.target.value)}
-            className="block w-full px-4 py-3 text-gray-900 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="sample-company"
-          />
-          <p className="mt-2 text-sm text-gray-600">
-            URLやAPIで使用される一意の識別子です（英数字とハイフンのみ）
-          </p>
         </div>
 
         <div className="pt-4">

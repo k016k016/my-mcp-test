@@ -35,10 +35,10 @@ async function getRequestInfo() {
  * - ローカル環境: メール送信なし、パスワード固定（password123）で直接ユーザー作成
  * - Vercel環境（プレビュー・本番）: メール送信あり、招待URL経由でユーザー登録
  */
-export async function inviteMember(organizationId: string, email: string, role: OrganizationRole) {
+export async function inviteMember(organizationId: string, email: string, fullName: string, role: OrganizationRole) {
   try {
     // 入力バリデーション
-    const validation = validateData(inviteMemberSchema, { organizationId, email, role })
+    const validation = validateData(inviteMemberSchema, { organizationId, email, fullName, role })
     if (!validation.success) {
       return { error: validation.error }
     }
@@ -171,6 +171,14 @@ export async function inviteMember(organizationId: string, email: string, role: 
 
       // プロフィールは自動的にトリガーで作成されるが、念のため確認
       await new Promise((resolve) => setTimeout(resolve, 500)) // トリガー実行を待つ
+
+      // プロフィールに氏名を設定
+      await supabase
+        .from('profiles')
+        .update({
+          full_name: validatedData.fullName,
+        })
+        .eq('id', newUser.user.id)
 
       // 組織メンバーとして追加
       const { error: memberError } = await supabase.from('organization_members').insert({

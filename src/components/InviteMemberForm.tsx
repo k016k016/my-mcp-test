@@ -14,6 +14,7 @@ interface InviteMemberFormProps {
 
 export default function InviteMemberForm({ organizationId, currentMemberCount, maxMembers }: InviteMemberFormProps) {
   const router = useRouter()
+  const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<OrganizationRole>('member')
   const [error, setError] = useState<string | null>(null)
@@ -30,7 +31,7 @@ export default function InviteMemberForm({ organizationId, currentMemberCount, m
     setCredentials(null)
     setIsLoading(true)
 
-    const result = await inviteMember(organizationId, email, role)
+    const result = await inviteMember(organizationId, email, fullName, role)
 
     if (result.error) {
       setError(result.error)
@@ -41,6 +42,7 @@ export default function InviteMemberForm({ organizationId, currentMemberCount, m
       if (result.credentials) {
         setCredentials(result.credentials)
       }
+      setFullName('')
       setEmail('')
       setRole('member')
       setIsLoading(false)
@@ -122,6 +124,21 @@ export default function InviteMemberForm({ organizationId, currentMemberCount, m
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">
+            氏名
+          </label>
+          <input
+            id="fullName"
+            type="text"
+            required
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            placeholder="山田 太郎"
+          />
+        </div>
+
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700">
             メールアドレス

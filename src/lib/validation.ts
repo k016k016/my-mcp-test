@@ -136,6 +136,7 @@ export const uuidSchema = z.string().uuid('有効なIDを指定してくださ�
 export const inviteMemberSchema = z.object({
   organizationId: uuidSchema,
   email: emailSchema,
+  fullName: z.string().min(1, '氏名を入力してください').max(100, '氏名は100文字以内で入力してください'),
   role: organizationRoleSchema,
 })
 
