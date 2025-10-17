@@ -3,7 +3,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 import { getDomainFromHost, DOMAINS, getDomainConfig } from '@/lib/domains/config'
 import { createClient } from '@/lib/supabase/server'
-import { isOpsUser, hasAdminAccess } from '@/lib/auth/permissions'
+import { isOpsUser, hasAdminAccess, hasOrganizationAccess } from '@/lib/auth/permissions'
 import { env } from '@/lib/env'
 
 export async function middleware(request: NextRequest) {
@@ -45,6 +45,47 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // WWWドメインのログインページで、既にログイン済みの場合は適切なドメインにリダイレクト
+  if (domain === DOMAINS.WWW && request.nextUrl.pathname === '/login') {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (user) {
+      console.log('[Middleware] User already logged in at /login:', user.id)
+
+      // 運用担当者チェック
+      const isOps = await isOpsUser(user)
+      if (isOps) {
+        const opsUrl = (env.NEXT_PUBLIC_OPS_URL || 'http://ops.localhost:3000').trim()
+        console.log('[Middleware] Redirecting to OPS:', opsUrl)
+        return NextResponse.redirect(new URL('/', opsUrl))
+      }
+
+      // 管理者権限チェック
+      const isAdmin = await hasAdminAccess(user)
+      if (isAdmin) {
+        const adminUrl = (env.NEXT_PUBLIC_ADMIN_URL || 'http://admin.localhost:3000').trim()
+        console.log('[Middleware] Redirecting to ADMIN:', adminUrl)
+        return NextResponse.redirect(new URL('/', adminUrl))
+      }
+
+      // 組織メンバーシップチェック
+      const hasMembership = await hasOrganizationAccess(user)
+      if (hasMembership) {
+        const appUrl = (env.NEXT_PUBLIC_APP_URL || 'http://app.localhost:3000').trim()
+        console.log('[Middleware] Redirecting to APP:', appUrl)
+        return NextResponse.redirect(new URL('/', appUrl))
+      }
+
+      // 組織未所属の場合はWWWのオンボーディングへ
+      const wwwBase = (env.NEXT_PUBLIC_WWW_URL || 'http://localhost:3000').trim()
+      console.log('[Middleware] Redirecting to onboarding:', wwwBase)
+      return NextResponse.redirect(new URL('/onboarding/create-organization', wwwBase))
+    }
+  }
+
   // 認証が必要なドメインの認証チェック
   // 後段でCookieを設定するための一時保持
   let orgIdToSetCookie: string | null = null
@@ -53,7 +94,7 @@ export async function middleware(request: NextRequest) {
     // ログインページとauthコールバックは認証チェックをスキップ
     const isLoginPage = request.nextUrl.pathname === '/login'
     const isAuthCallback = request.nextUrl.pathname.startsWith('/auth/')
-    
+
     if (!isLoginPage && !isAuthCallback) {
       // 認証チェック（簡易版）
       const supabase = await createClient()
