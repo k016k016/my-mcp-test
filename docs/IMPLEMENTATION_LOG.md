@@ -1302,6 +1302,137 @@ export default function LoginPage() {
 
 ---
 
+## 2025-10-18: E2Eテストファイルの整理とリファクタリング
+
+### 📌 実装の背景
+
+新しい認証仕様（共通パスワード`test1234`、`.local.test`ドメイン）への移行完了後、古い仕様のテストファイルが残っており、以下の問題がありました：
+
+1. **テストコードの重複**: `auth.spec.ts`と同じ内容をテストする古いファイルが複数存在
+2. **古い仕様の混在**: 古いパスワード形式（`MemberPassword123!`）や`localhost`ドメインを使用するテストが残存
+3. **メンテナンス性の低下**: 未実装機能のテストファイルが多く、どれが有効なのか不明確
+4. **本番環境テストの不明確さ**: Vercel Preview環境用のテストファイルがハードコードされており、環境切り替えができない
+
+### 🎯 実装内容
+
+#### 1. 古い・重複するテストファイルの削除（5ファイル）
+
+**削除したファイル**:
+- `e2e/auth-manual-test.spec.ts` - `auth.spec.ts`と重複する手動テスト
+- `e2e/login-redirect.spec.ts` - `auth.spec.ts`のログインリダイレクトテストと重複
+- `e2e/localhost.spec.ts` - `.local.test`ドメインへの移行により不要
+- `e2e/vercel-preview.spec.ts` - 環境固有のハードコードされたテスト（環境変数で対応可能）
+- `e2e/organization.spec.ts` - 古い仕様のテスト、スキップされたテストを含む
+
+**削除理由**:
+```typescript
+// 例: login-redirect.spec.ts（古いパスワード）
+const password = 'AdminPassword123!'  // ❌ 古い仕様
+
+// auth.spec.ts（新しい仕様）
+const TEST_PASSWORD = 'test1234'  // ✅ 新しい仕様
+
+// 例: localhost.spec.ts（古いドメイン）
+await page.goto('http://localhost:3000')  // ❌ Cookie共有できない
+
+// auth.spec.ts（新しいドメイン）
+await page.goto('http://www.local.test:3000')  // ✅ Cookie共有可能
+```
+
+#### 2. 保持したテストファイル（6ファイル）
+
+将来の実装に備えて以下は保持：
+- ✅ `e2e/auth.spec.ts` - 認証フロー（最新・更新済み）
+- 📝 `e2e/domain-layouts.spec.ts` - レイアウトテスト（実装待ち）
+- 📝 `e2e/member-invitation.spec.ts` - メンバー招待（実装待ち）
+- 📝 `e2e/organization-switching.spec.ts` - 組織切り替え（実装待ち）
+- 📝 `e2e/admin-domain.spec.ts` - ADMINドメイン（実装待ち）
+- 📝 `e2e/ops-domain.spec.ts` - OPSドメイン（実装待ち）
+
+#### 3. 本番環境テストの方針決定
+
+**問題**: `vercel-preview.spec.ts`はドメインがハードコード
+```typescript
+// ❌ 環境固有のハードコード
+await page.goto('https://www.cocktailorder.com')
+await page.goto('https://app.cocktailorder.com')
+```
+
+**解決策**: 環境変数でテスト対象を切り替え可能に
+
+既存の`package.json`スクリプト:
+```json
+{
+  "test:e2e": "playwright test",  // ローカル
+  "test:e2e:preview": "PLAYWRIGHT_BASE_URL=https://www.cocktailorder.com playwright test",
+  "test:e2e:production": "PLAYWRIGHT_BASE_URL=https://your-production-domain.com playwright test"
+}
+```
+
+`playwright.config.ts`が既にサポート:
+```typescript
+const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000'
+```
+
+**効果**:
+- ハードコードされたドメインテストファイルが不要に
+- 既存のテストファイルが環境変数で本番/Preview環境でも実行可能
+- CI/CD環境での柔軟な運用が可能
+
+### 📁 変更ファイル一覧
+
+| ファイル | 変更内容 | タイプ |
+|---------|---------|--------|
+| `e2e/auth-manual-test.spec.ts` | 削除（auth.spec.tsと重複） | 削除 |
+| `e2e/login-redirect.spec.ts` | 削除（auth.spec.tsと重複） | 削除 |
+| `e2e/localhost.spec.ts` | 削除（.local.testに移行済み） | 削除 |
+| `e2e/vercel-preview.spec.ts` | 削除（環境変数で対応可能） | 削除 |
+| `e2e/organization.spec.ts` | 削除（古い仕様・他と重複） | 削除 |
+
+### ✅ 効果・改善点
+
+- ✅ **テストコードの明確化**: 重複がなくなり、役割が明確に
+- ✅ **メンテナンス性向上**: 古い仕様のテストがなくなり混乱を防ぐ
+- ✅ **環境切り替えが容易**: 環境変数で本番/Preview環境のテストが可能
+- ✅ **実行速度向上**: 不要なテストファイルがなくなりテスト時間短縮
+- ✅ **一貫性の確保**: すべてのテストが新しいパスワード仕様（`test1234`）と`.local.test`ドメインを使用
+
+### 📊 テストファイル数の変化
+
+```
+削除前: 11ファイル
+ ├─ auth-manual-test.spec.ts
+ ├─ login-redirect.spec.ts
+ ├─ localhost.spec.ts
+ ├─ vercel-preview.spec.ts
+ ├─ organization.spec.ts
+ ├─ auth.spec.ts ✅
+ ├─ admin-domain.spec.ts ✅
+ ├─ domain-layouts.spec.ts ✅
+ ├─ member-invitation.spec.ts ✅
+ ├─ ops-domain.spec.ts ✅
+ └─ organization-switching.spec.ts ✅
+
+削除後: 6ファイル（実装済み1 + 実装待ち5）
+ ├─ auth.spec.ts ✅ 認証フロー（最新）
+ ├─ admin-domain.spec.ts 📝 実装待ち
+ ├─ domain-layouts.spec.ts 📝 実装待ち
+ ├─ member-invitation.spec.ts 📝 実装待ち
+ ├─ ops-domain.spec.ts 📝 実装待ち
+ └─ organization-switching.spec.ts 📝 実装待ち
+
+削減率: 約45%減（11 → 6ファイル）
+```
+
+### 🔗 関連リンク
+
+- E2Eテスト設定: `playwright.config.ts`
+- 実装済みテスト: `e2e/auth.spec.ts`
+- テストアカウント情報: `e2e/TEST_ACCOUNTS.md`
+- npm scriptsドキュメント: `package.json`
+
+---
+
 ## テンプレート（次回の実装記録用）
 
 ```markdown
