@@ -78,11 +78,14 @@ OPSドメイン:
 
 #### **一般ユーザー・管理者ログイン** (`/login`)
 ```
-ログイン成功 → ユーザー状況を判定:
+ログイン成功 → 権限に応じて遷移:
 
-1. 組織未所属 → オンボーディング
-2. 管理者権限あり → admin.xxx.com
-3. 一般ユーザー → app.xxx.com
+1. 管理者権限あり（owner/admin）→ admin.xxx.com
+2. 一般ユーザー（member） → app.xxx.com
+
+前提: 本システムでは「組織未所属ユーザー」は想定しない
+  - オーナーはサインアップ時に組織を作成
+  - メンバーはオーナーからの招待により所属組織が決まる
 ```
 
 #### **運用担当者ログイン** (`ops.xxx.com/login`)
@@ -103,13 +106,21 @@ OPSドメイン:
 
 ## 🏗️ ビジネスフロー
 
-### **1. ユーザー登録・組織作成フロー**
+### **1. ユーザー登録・組織作成フロー（オーナー）**
 
 ```
-1. 管理者がサインアップ → 組織作成 → 契約
-2. 組織ページからユーザー招待
-3. 招待時に権限設定（admin/app）
-4. 招待されたユーザーは発行されたメール・パスワードでログイン
+1. オーナーがサインアップ（WWW）
+   → 同時に組織を作成（オーナー=ownerとして登録）
+2. プラン選択 → 決済情報入力（WWWのオンボーディング: payment）
+3. 決済完了後、ADMINドメインへ
+```
+
+### **2. メンバー招待フロー（管理者）**
+
+```
+1. 管理者（owner/admin）がADMINからメンバー招待
+2. 招待されたユーザーはメール/発行情報でログイン
+3. ログイン後はAPPドメインへ（所属組織は招待で確定済み）
 ```
 
 ### **2. 権限の関係**
@@ -193,7 +204,7 @@ OPSドメイン:
 - ✅ ログイン後は権限に応じて適切なドメインにリダイレクト
   - 実装場所: `src/app/actions/auth.ts:140`
   - `getRedirectUrlForUser(user)`を使用
-  - owner/admin → ADMIN、member → APP、組織なし → オンボーディング
+  - owner/admin → ADMIN、member → APP（組織なしケースは存在しない）
 
 - ✅ ログイン済みユーザーがWWWログインページにアクセスした場合の処理
   - 実装場所: `src/app/www/login/page.tsx`
@@ -201,9 +212,11 @@ OPSドメイン:
   - ログイン済みの場合は権限に応じたドメインに即座にリダイレクト
   - ログインフォームは`src/components/LoginForm.tsx`に分離
 
-- ✅ 組織作成後のリダイレクト先をADMINに変更
-  - 実装場所: `src/app/www/onboarding/create-organization/page.tsx:73`
-  - owner権限を持つため、管理画面（ADMIN）に遷移
+  
+**2. オンボーディング（プラン/決済）**
+- ✅ WWWのオンボーディング支払い画面でプラン選択/決済
+  - 実装場所: `src/app/www/onboarding/payment/page.tsx`
+  - 決済完了後にADMINへ遷移
 
 **2. メンバー招待機能の環境別実装**
 - ✅ ローカル環境: メール送信なし、パスワード固定（`password123`）
@@ -235,8 +248,9 @@ export async function getRedirectUrlForUser(user: User): Promise<string> {
     return process.env.NEXT_PUBLIC_APP_URL || 'http://app.localhost:3000'
   }
 
-  // 組織に所属していない場合はオンボーディングへ
-  return `${process.env.NEXT_PUBLIC_WWW_URL || 'http://localhost:3000'}/onboarding/create-organization`
+  // 想定外（原則発生しない）
+  // 仕様上、組織未所属ユーザーは存在しないためWWWトップへフォールバック
+  return process.env.NEXT_PUBLIC_WWW_URL || 'http://localhost:3000'
 }
 ```
 

@@ -28,9 +28,9 @@ export default function SignUpPage() {
         // メール確認が必要な場合
         router.push('/auth/verify-email')
       } else {
-        // メール確認不要の場合は直接ADMIN画面へ
-        const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL || 'http://admin.local.test:3000'
-        window.location.href = adminUrl
+        // メール確認不要の場合はオンボーディングの支払いへ（WWW）
+        const wwwUrl = process.env.NEXT_PUBLIC_WWW_URL || 'http://www.local.test:3000'
+        window.location.href = `${wwwUrl}/onboarding/payment`
       }
     } else {
       setError('予期しないエラーが発生しました')

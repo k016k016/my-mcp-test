@@ -22,6 +22,7 @@ export async function hasAdminAccess(user: User, organizationId?: string): Promi
     .from('organization_members')
     .select('role')
     .eq('user_id', user.id)
+    .is('deleted_at', null)
   
   if (organizationId) {
     query = query.eq('organization_id', organizationId)
@@ -51,14 +52,15 @@ export async function hasOrganizationAccess(user: User, organizationId?: string)
     .from('organization_members')
     .select('id')
     .eq('user_id', user.id)
+    .is('deleted_at', null)
   
   if (organizationId) {
     query = query.eq('organization_id', organizationId)
   }
   
   const { data: memberships } = await query
-  
-  return memberships && memberships.length > 0
+
+  return Array.isArray(memberships) && memberships.length > 0
 }
 
 /**
@@ -90,6 +92,10 @@ export async function getUserPermissionLevel(user: User): Promise<{
       )
     `)
     .eq('user_id', user.id)
+    .is('deleted_at', null)
+  
+  console.log('[getUserPermissionLevel] User ID:', user.id)
+  console.log('[getUserPermissionLevel] Memberships:', memberships)
   
   const organizations = (memberships || []).map((m: any) => ({
     id: m.organization.id,
@@ -97,10 +103,14 @@ export async function getUserPermissionLevel(user: User): Promise<{
     role: m.role
   }))
   
+  console.log('[getUserPermissionLevel] Organizations:', organizations)
+  
   // 管理者権限チェック（任意の組織でadmin/owner）
   const isAdmin = organizations.some(org => 
     org.role === 'owner' || org.role === 'admin'
   )
+  
+  console.log('[getUserPermissionLevel] isAdmin:', isAdmin)
   
   // メンバー権限チェック
   const isMember = organizations.length > 0
@@ -120,21 +130,33 @@ export async function getUserPermissionLevel(user: User): Promise<{
 export async function getRedirectUrlForUser(user: User): Promise<string> {
   const permissions = await getUserPermissionLevel(user)
 
+  console.log('[getRedirectUrlForUser] User ID:', user.id)
+  console.log('[getRedirectUrlForUser] Permissions:', permissions)
+
   // 運用担当者はOPS画面へ
   if (permissions.isOps) {
-    return process.env.NEXT_PUBLIC_OPS_URL || 'http://ops.localhost:3000'
+    const url = process.env.NEXT_PUBLIC_OPS_URL || 'http://ops.localhost:3000'
+    console.log('[getRedirectUrlForUser] Redirecting to OPS:', url)
+    return url
   }
 
   // 管理者はADMIN画面へ
   if (permissions.isAdmin) {
-    return process.env.NEXT_PUBLIC_ADMIN_URL || 'http://admin.localhost:3000'
+    const url = process.env.NEXT_PUBLIC_ADMIN_URL || 'http://admin.localhost:3000'
+    console.log('[getRedirectUrlForUser] Redirecting to ADMIN:', url)
+    return url
   }
 
   // 一般メンバーはAPP画面へ
   if (permissions.isMember) {
-    return process.env.NEXT_PUBLIC_APP_URL || 'http://app.localhost:3000'
+    const url = process.env.NEXT_PUBLIC_APP_URL || 'http://app.localhost:3000'
+    console.log('[getRedirectUrlForUser] Redirecting to APP:', url)
+    return url
   }
 
-  // 組織に所属していない場合はオンボーディング（組織作成）へ
-  return `${process.env.NEXT_PUBLIC_WWW_URL || 'http://localhost:3000'}/onboarding/create-organization`
+  // 想定外（原則発生しない）: 仕様上、組織未所属ユーザーは存在しない
+  // フォールバックとしてWWWトップへ
+  const url = process.env.NEXT_PUBLIC_WWW_URL || 'http://localhost:3000'
+  console.log('[getRedirectUrlForUser] Redirecting to WWW (fallback):', url)
+  return url
 }

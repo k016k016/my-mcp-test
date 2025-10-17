@@ -124,6 +124,7 @@ export async function signUp(formData: FormData) {
     }
 
     // 即座にログインできた場合（メール確認不要設定の場合）
+    // 仕様: サインアップ時にownerとして組織作成済み → WWWのオンボーディング（支払い）へ
     return { success: true, requiresEmailConfirmation: false }
   } catch (error) {
     console.error('[signUp] Unexpected error:', error)
@@ -136,13 +137,18 @@ export async function signUp(formData: FormData) {
  */
 export async function signIn(formData: FormData) {
   try {
+    console.log('[signIn] Starting sign in process')
+    console.log('[signIn] FormData received:', Object.fromEntries(formData.entries()))
+    
     // 入力バリデーション
     const validation = validateFormData(signInSchema, formData)
     if (!validation.success) {
+      console.log('[signIn] Validation failed:', validation.error)
       return { error: validation.error }
     }
 
     const { email, password } = validation.data
+    console.log('[signIn] Attempting to sign in user:', email)
 
     // レート制限チェック（5回/5分）
     const rateLimit = await rateLimitLogin(email)
@@ -175,10 +181,13 @@ export async function signIn(formData: FormData) {
     // ログイン成功 - ユーザーの権限に応じてリダイレクト
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
+      console.log('[signIn] Login successful for user:', user.id)
       const redirectUrl = await getRedirectUrlForUser(user)
+      console.log('[signIn] Redirecting to:', redirectUrl)
       revalidatePath('/', 'layout')
       redirect(redirectUrl)
     } else {
+      console.log('[signIn] No user found after login, redirecting to APP')
       revalidatePath('/', 'layout')
       redirect(env.NEXT_PUBLIC_APP_URL)
     }

@@ -6,6 +6,7 @@ import { headers } from 'next/headers'
 import OrganizationSwitcher from '@/components/OrganizationSwitcher'
 import { getCurrentOrganizationId } from '@/lib/organization/current'
 import LogoutButton from '@/components/LogoutButton'
+import { env } from '@/lib/env'
 import SessionMonitor from '@/components/SessionMonitor'
 
 export const metadata: Metadata = {
@@ -26,8 +27,9 @@ export default async function AdminLayout({
   } = await supabase.auth.getUser()
 
   if (!user) {
-    const wwwUrl = process.env.NEXT_PUBLIC_WWW_URL || 'http://localhost:3000'
-    redirect(`${wwwUrl}/login`)
+    const wwwBase = (env.NEXT_PUBLIC_WWW_URL || 'http://localhost:3000').trim()
+    const to = new URL('/login', wwwBase)
+    redirect(to.toString())
   }
 
   // ユーザーが所属する組織を取得
@@ -38,20 +40,22 @@ export default async function AdminLayout({
       role,
       organization:organizations (
         id,
-        name,
-        slug
+        name
       )
     `
     )
     .eq('user_id', user.id)
+    .is('deleted_at', null)
 
   const organizations = (memberships || []).map((m: any) => m.organization)
 
   // 現在の組織IDを取得
   let currentOrgId = await getCurrentOrganizationId()
+  console.log('[ADMIN Layout] Raw currentOrgId from cookie:', currentOrgId)
 
   // 現在の組織が設定されていない、または無効な場合は最初の組織を使用
   if (!currentOrgId || !organizations.find((org: any) => org.id === currentOrgId)) {
+    console.log('[ADMIN Layout] Setting currentOrgId to first organization:', organizations[0]?.id)
     currentOrgId = organizations[0]?.id || null
   }
 
@@ -61,10 +65,19 @@ export default async function AdminLayout({
   )
   const isAdmin = currentMembership?.role === 'owner' || currentMembership?.role === 'admin'
 
+  console.log('[ADMIN Layout] User ID:', user.id)
+  console.log('[ADMIN Layout] Memberships:', memberships)
+  console.log('[ADMIN Layout] Current Org ID:', currentOrgId)
+  console.log('[ADMIN Layout] Current Membership:', currentMembership)
+  console.log('[ADMIN Layout] isAdmin:', isAdmin)
+
   if (!isAdmin) {
     // 管理者権限がない場合はAPP画面へ
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://app.localhost:3000'
-    redirect(`${appUrl}?message=管理者権限がありません`)
+    console.log('[ADMIN Layout] Redirecting to APP - no admin permission')
+    const appBase = (env.NEXT_PUBLIC_APP_URL || 'http://app.localhost:3000').trim()
+    const to = new URL('/', appBase)
+    to.searchParams.set('message', '管理者権限がありません')
+    redirect(to.toString())
   }
 
   // プロフィール情報を取得

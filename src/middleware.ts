@@ -4,10 +4,13 @@ import { updateSession } from '@/lib/supabase/middleware'
 import { getDomainFromHost, DOMAINS, getDomainConfig } from '@/lib/domains/config'
 import { createClient } from '@/lib/supabase/server'
 import { isOpsUser, hasAdminAccess } from '@/lib/auth/permissions'
+import { env } from '@/lib/env'
 
 export async function middleware(request: NextRequest) {
   const host = request.headers.get('host') || ''
   const domain = getDomainFromHost(host)
+  
+  console.log('[Middleware] Request to:', host, 'Domain type:', domain, 'Path:', request.nextUrl.pathname)
 
   // 未知のサブドメインの場合は404エラーを返す
   if (domain === null) {
@@ -27,7 +30,7 @@ export async function middleware(request: NextRequest) {
       const clientIp =
         request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
         request.headers.get('x-real-ip') ||
-        request.ip ||
+        // NextRequest に ip は無い場合があるため、未取得時は unknown
         'unknown'
 
       // IPが許可リストに含まれていない場合は403エラー
@@ -43,6 +46,9 @@ export async function middleware(request: NextRequest) {
   }
 
   // 認証が必要なドメインの認証チェック
+  // 後段でCookieを設定するための一時保持
+  let orgIdToSetCookie: string | null = null
+
   if (domain === DOMAINS.APP || domain === DOMAINS.ADMIN || domain === DOMAINS.OPS) {
     // ログインページとauthコールバックは認証チェックをスキップ
     const isLoginPage = request.nextUrl.pathname === '/login'
@@ -55,34 +61,43 @@ export async function middleware(request: NextRequest) {
         data: { user },
       } = await supabase.auth.getUser()
 
-      if (!user) {
-        // 未認証の場合は適切なログインページへリダイレクト
-        const loginUrl = domain === DOMAINS.OPS ? '/login' : `${process.env.NEXT_PUBLIC_WWW_URL}/login`
-        return NextResponse.redirect(new URL(loginUrl, request.url))
-      }
+      console.log('[Middleware] Auth check for domain:', domain, 'User:', user?.id || 'none')
 
-      // OPSドメインの場合は運用担当者権限チェック
-      if (domain === DOMAINS.OPS) {
-        const hasOpsAccess = await isOpsUser(user)
-        if (!hasOpsAccess) {
-          // 運用担当者以外はWWWログインページへ
-          const wwwUrl = process.env.NEXT_PUBLIC_WWW_URL || 'http://localhost:3000'
-          return NextResponse.redirect(`${wwwUrl}/login`)
+      if (!user) {
+        // 未認証: OPSのみ専用ログインへ。APP/ADMINはページ側で処理させる（初回アクセス時のセッション同期のため）
+        if (domain === DOMAINS.OPS) {
+          return NextResponse.redirect(new URL('/login', (env.NEXT_PUBLIC_OPS_URL || 'http://ops.local.test:3000').trim()))
+        }
+      } else {
+        // 認証済みの場合のみ以下の処理
+        // OPSドメインの場合は運用担当者権限チェック
+        if (domain === DOMAINS.OPS) {
+          const hasOpsAccess = await isOpsUser(user)
+          if (!hasOpsAccess) {
+            // 運用担当者以外はWWWログインページへ
+            const wwwBase = (env.NEXT_PUBLIC_WWW_URL || 'http://www.local.test:3000').trim()
+            return NextResponse.redirect(new URL('/login', wwwBase))
+          }
         }
       }
+      
 
-      // ADMINドメインの場合は管理者権限チェック
-      if (domain === DOMAINS.ADMIN) {
-        const hasAdminPermission = await hasAdminAccess(user)
-        if (!hasAdminPermission) {
-          // 管理者権限がない場合はAPP画面へ
-					// OK
-					const appBase = process.env.NEXT_PUBLIC_APP_URL || 'http://app.localhost:3000'
-					const to = new URL('/', appBase)
-					to.searchParams.set('message', '管理者権限がありません')
-					return NextResponse.redirect(to)
-          // const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://app.localhost:3000'
-          // return NextResponse.redirect(`${appUrl}?message=管理者権限がありません`)
+      // ADMINドメインの権限チェックはページ側で実施
+      // （ミドルウェアはEdge環境のため、RLS/権限判定の不整合を避ける目的）
+      
+      // current_organization_id クッキーが未設定の場合は、ユーザーの最初の組織を後段で設定
+      const hasOrgCookie = request.cookies.get('current_organization_id')?.value
+      if (!hasOrgCookie) {
+        const { data: memberships } = await supabase
+          .from('organization_members')
+          .select('organization_id')
+          .eq('user_id', user.id)
+          .is('deleted_at', null)
+          .limit(1)
+
+        const firstOrgId = Array.isArray(memberships) && memberships[0]?.organization_id
+        if (firstOrgId) {
+          orgIdToSetCookie = firstOrgId
         }
       }
     }
@@ -90,6 +105,18 @@ export async function middleware(request: NextRequest) {
 
   // Supabaseセッションを更新
   let response = await updateSession(request)
+
+  // 必要であればここでCookieを設定
+  if (orgIdToSetCookie) {
+    const cookieDomain = (process.env.NEXT_PUBLIC_COOKIE_DOMAIN || '.local.test').trim()
+    response.cookies.set('current_organization_id', orgIdToSetCookie, {
+      domain: cookieDomain,
+      path: '/',
+      sameSite: 'lax',
+      httpOnly: true,
+    })
+    console.log('[Middleware] Set current_organization_id cookie:', orgIdToSetCookie)
+  }
 
   // リライト処理：各ドメインを対応するフォルダにマッピング
   const url = request.nextUrl.clone()
@@ -114,6 +141,7 @@ export async function middleware(request: NextRequest) {
       break
   }
 
+  console.log('[Middleware] Rewriting to:', url.pathname)
   response = NextResponse.rewrite(url, response)
 
   // カスタムヘッダーでドメイン情報を追加

@@ -189,15 +189,15 @@ export async function createTestOrganization(
   const supabase = createAdminClient()
 
   try {
-    // 既存の組織があれば削除
+    // 既存の組織があれば削除（名前で検索）
     const { data: existingOrgs } = await supabase
       .from('organizations')
       .select('id')
-      .eq('slug', slug)
+      .eq('name', name)
 
     if (existingOrgs && existingOrgs.length > 0) {
       for (const org of existingOrgs) {
-        console.log(`🔄 既存組織を削除: ${slug}`)
+        console.log(`🔄 既存組織を削除: ${name}`)
         // メンバーシップを削除
         await supabase.from('organization_members').delete().eq('organization_id', org.id)
         // 組織を削除
@@ -210,7 +210,8 @@ export async function createTestOrganization(
       .from('organizations')
       .insert({
         name,
-        slug,
+        subscription_plan: 'free',
+        subscription_status: 'active',
       })
       .select()
       .single()

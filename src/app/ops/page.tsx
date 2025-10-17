@@ -9,6 +9,7 @@ import {
   getAuditLogs,
 } from '@/app/actions/ops'
 import Link from 'next/link'
+import { env } from '@/lib/env'
 
 export default async function OpsPage() {
   const supabase = await createClient()
@@ -19,15 +20,17 @@ export default async function OpsPage() {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    const opsUrl = process.env.NEXT_PUBLIC_OPS_URL || 'http://ops.localhost:3000'
-    redirect(`${opsUrl}/login`)
+    const opsBase = (env.NEXT_PUBLIC_OPS_URL || 'http://ops.localhost:3000').trim()
+    redirect(new URL('/login', opsBase).toString())
   }
 
   // OPS権限チェック
   const hasOpsAccess = await isOpsUser(user)
   if (!hasOpsAccess) {
-    const wwwUrl = process.env.NEXT_PUBLIC_WWW_URL || 'http://localhost:3000'
-    redirect(`${wwwUrl}/login?error=運用担当者権限が必要です`)
+    const wwwBase = (env.NEXT_PUBLIC_WWW_URL || 'http://localhost:3000').trim()
+    const to = new URL('/login', wwwBase)
+    to.searchParams.set('error', '運用担当者権限が必要です')
+    redirect(to.toString())
   }
 
   // システム統計を取得

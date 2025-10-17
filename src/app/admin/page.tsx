@@ -26,12 +26,25 @@ export default function AdminPage() {
       }
 
       // 現在の組織IDを取得
-      const organizationId = await getCurrentOrganizationId()
+      let organizationId = await getCurrentOrganizationId()
 
+      // 組織IDが取得できない場合は、ユーザーの最初の組織を使用
       if (!organizationId) {
-        const wwwUrl = process.env.NEXT_PUBLIC_WWW_URL || 'http://www.local.test:3000'
-        window.location.href = `${wwwUrl}/onboarding/select-plan`
-        return
+        const { data: memberships } = await supabase
+          .from('organization_members')
+          .select('organization_id')
+          .eq('user_id', user.id)
+          .is('deleted_at', null)
+          .limit(1)
+
+        if (memberships && memberships.length > 0) {
+          organizationId = memberships[0].organization_id
+          // Cookieの設定はServer Actionで行う必要があるため、ここでは設定しない
+        } else {
+          const wwwUrl = process.env.NEXT_PUBLIC_WWW_URL || 'http://www.local.test:3000'
+          window.location.href = `${wwwUrl}/onboarding/select-plan`
+          return
+        }
       }
 
       // 権限チェック（オーナーまたは管理者）

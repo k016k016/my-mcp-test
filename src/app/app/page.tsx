@@ -3,13 +3,14 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { env } from '@/lib/env'
 import { getCurrentOrganizationId } from '@/lib/organization/current'
-import { InitializeOrganization } from '@/components/initialize-organization'
 
 type AppPageProps = {
   searchParams: { error?: string }
 }
 
 export default async function AppPage({ searchParams }: AppPageProps) {
+  const resolvedSearchParams = await searchParams
+  console.log('[APP Page] Starting APP page render')
   const supabase = await createClient()
 
   // ユーザー認証チェック
@@ -17,7 +18,10 @@ export default async function AppPage({ searchParams }: AppPageProps) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  console.log('[APP Page] User check:', user?.id || 'none')
+
   if (!user) {
+    console.log('[APP Page] No user, redirecting to WWW login')
     // 未認証の場合はWWWドメインのログインページへ
     redirect(`${env.NEXT_PUBLIC_WWW_URL}/login`)
   }
@@ -31,7 +35,6 @@ export default async function AppPage({ searchParams }: AppPageProps) {
       organization:organizations (
         id,
         name,
-        slug,
         subscription_plan,
         subscription_status
       )
@@ -39,9 +42,13 @@ export default async function AppPage({ searchParams }: AppPageProps) {
     )
     .eq('user_id', user.id)
 
-  // 組織が1つもない場合は組織作成ページへ
+  console.log('[APP Page] Memberships:', memberships?.length || 0)
+
+  // 仕様上、組織未所属ユーザーは存在しない想定
   if (!memberships || memberships.length === 0) {
-    redirect('/onboarding/create-organization')
+    console.log('[APP Page] No memberships, redirecting to WWW')
+    // 想定外フォールバック: WWWトップへ
+    redirect(env.NEXT_PUBLIC_WWW_URL)
   }
 
   // Cookieから最後に選択した組織を取得
@@ -58,21 +65,21 @@ export default async function AppPage({ searchParams }: AppPageProps) {
   }
 
   const currentOrg = currentMembership.organization as any
-  const needsOrgCookieUpdate = !currentOrgId && currentOrg?.id
+
+  console.log('[APP Page] Current org:', currentOrg?.name || 'none')
+  console.log('[APP Page] Rendering APP dashboard')
 
   return (
     <div>
-      {/* 組織クッキーの初期化（必要な場合のみ） */}
-      {needsOrgCookieUpdate && <InitializeOrganization organizationId={currentOrg.id} />}
 
       {/* エラーメッセージ */}
-      {searchParams.error && (
+      {resolvedSearchParams.error && (
         <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
           <div className="flex items-center">
             <svg className="w-6 h-6 text-red-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <p className="text-red-800 font-medium">{searchParams.error}</p>
+            <p className="text-red-800 font-medium">{resolvedSearchParams.error}</p>
           </div>
         </div>
       )}

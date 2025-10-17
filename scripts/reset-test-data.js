@@ -64,8 +64,8 @@ async function cleanupTestData() {
       await supabase.from('organizations').delete().in('id', orgIds)
     }
 
-    // test-org, owner-org も削除
-    await supabase.from('organizations').delete().in('slug', ['test-org', 'owner-org'])
+    // テスト組織を名前で削除
+    await supabase.from('organizations').delete().in('name', ['Test Organization', 'Owner Organization'])
 
     // プロフィールを削除
     await supabase.from('profiles').delete().in('id', userIds)
@@ -91,7 +91,7 @@ async function createTestUsers() {
       companyName: 'Test Company',
       contactName: 'Test User',
       orgName: 'Test Organization',
-      orgSlug: 'test-org',
+      // slug は削除されたため使用しない
     },
     {
       email: 'owner@example.com',
@@ -99,7 +99,7 @@ async function createTestUsers() {
       companyName: 'Owner Company',
       contactName: 'Owner User',
       orgName: 'Owner Organization',
-      orgSlug: 'owner-org',
+      // slug は削除されたため使用しない
     },
   ]
 
@@ -136,13 +136,14 @@ async function createTestUsers() {
       .from('organizations')
       .insert({
         name: user.orgName,
-        slug: user.orgSlug,
+        subscription_plan: 'free',
+        subscription_status: 'active',
       })
       .select()
       .single()
 
     if (orgError) {
-      console.error(`❌ 組織作成失敗 (${user.orgSlug}):`, orgError.message)
+      console.error(`❌ 組織作成失敗 (${user.orgName}):`, orgError.message)
       continue
     }
 
@@ -153,7 +154,7 @@ async function createTestUsers() {
       role: 'owner',
     })
 
-    console.log(`✅ 組織作成: ${user.orgName} (${user.orgSlug})`)
+    console.log(`✅ 組織作成: ${user.orgName}`)
   }
 }
 

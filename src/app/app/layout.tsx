@@ -34,12 +34,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       role,
       organization:organizations (
         id,
-        name,
-        slug
+        name
       )
     `
     )
     .eq('user_id', user.id)
+    .is('deleted_at', null)
 
   const organizations = (memberships || []).map((m: any) => m.organization)
 
@@ -49,6 +49,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // 現在の組織が設定されていない、または無効な場合は最初の組織を使用
   if (!currentOrgId || !organizations.find((org: any) => org.id === currentOrgId)) {
     currentOrgId = organizations[0]?.id || null
+    // Cookieの設定はServer Actionで行う必要があるため、ここでは設定しない
   }
 
   // プロフィール情報を取得

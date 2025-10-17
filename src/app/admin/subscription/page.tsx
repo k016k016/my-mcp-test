@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getCurrentOrganizationId } from '@/lib/organization/current'
 import SubscriptionCard from '@/components/SubscriptionCard'
+import { env } from '@/lib/env'
 
 export default async function SubscriptionPage() {
   const supabase = await createClient()
@@ -13,15 +14,16 @@ export default async function SubscriptionPage() {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    const wwwUrl = process.env.NEXT_PUBLIC_WWW_URL || 'http://localhost:3000'
-    redirect(`${wwwUrl}/login`)
+    const wwwBase = (env.NEXT_PUBLIC_WWW_URL || 'http://localhost:3000').trim()
+    redirect(new URL('/login', wwwBase).toString())
   }
 
   // 現在の組織IDを取得
   const organizationId = await getCurrentOrganizationId()
 
   if (!organizationId) {
-    redirect('/onboarding/create-organization')
+    // 想定外フォールバック
+    redirect(env.NEXT_PUBLIC_WWW_URL)
   }
 
   // 権限チェック（オーナーのみ）
@@ -36,7 +38,9 @@ export default async function SubscriptionPage() {
   const isOwner = currentMember?.role === 'owner'
 
   if (!isOwner) {
-    redirect('/?error=オーナー権限が必要です')
+    const to = new URL('/', 'http://admin.local.test:3000')
+    to.searchParams.set('error', 'オーナー権限が必要です')
+    redirect(to.toString())
   }
 
   // 組織情報を取得
@@ -72,7 +76,11 @@ export default async function SubscriptionPage() {
 
       {/* 現在のプラン */}
       <div className="mb-8">
-        <SubscriptionCard organization={organization!} />
+        <SubscriptionCard
+          organization={organization as any}
+          usageLimit={usageLimit as any}
+          currentUsage={{ members: membersCount || 0, projects: 0, storage_gb: 0, api_calls: 0 }}
+        />
       </div>
 
       {/* 使用量の詳細 */}

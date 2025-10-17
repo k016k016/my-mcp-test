@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getCurrentOrganizationId } from '@/lib/organization/current'
 import OrganizationSettingsForm from '@/components/OrganizationSettingsForm'
+import { env } from '@/lib/env'
 
 export default async function OrganizationSettingsPage() {
   const supabase = await createClient()
@@ -13,15 +14,16 @@ export default async function OrganizationSettingsPage() {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    const wwwUrl = process.env.NEXT_PUBLIC_WWW_URL || 'http://localhost:3000'
-    redirect(`${wwwUrl}/login`)
+    const wwwBase = (env.NEXT_PUBLIC_WWW_URL || 'http://localhost:3000').trim()
+    redirect(new URL('/login', wwwBase).toString())
   }
 
   // 現在の組織IDを取得
   const organizationId = await getCurrentOrganizationId()
 
   if (!organizationId) {
-    redirect('/onboarding/create-organization')
+    // 想定外フォールバック
+    redirect(env.NEXT_PUBLIC_WWW_URL)
   }
 
   // 権限チェック（オーナーまたは管理者）
@@ -36,8 +38,10 @@ export default async function OrganizationSettingsPage() {
   const isAdmin = currentMember?.role === 'owner' || currentMember?.role === 'admin'
 
   if (!isAdmin) {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://app.localhost:3000'
-    redirect(`${appUrl}?error=管理者権限がありません`)
+    const appBase = (env.NEXT_PUBLIC_APP_URL || 'http://app.localhost:3000').trim()
+    const to = new URL('/', appBase)
+    to.searchParams.set('error', '管理者権限がありません')
+    redirect(to.toString())
   }
 
   // 組織情報を取得

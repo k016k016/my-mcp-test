@@ -15,19 +15,7 @@ export async function GET(request: NextRequest) {
     const { error, data } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error && data.user) {
-      // ユーザーが組織に所属しているかチェック
-      const { data: memberships } = await supabase
-        .from('organization_members')
-        .select('organization_id')
-        .eq('user_id', data.user.id)
-        .limit(1)
-
-      // 組織に所属していない場合はプラン選択ページへ（B2B新規ユーザー）
-      if (!memberships || memberships.length === 0) {
-        return NextResponse.redirect(new URL('/onboarding/select-plan', requestUrl.origin))
-      }
-
-      // 既存ユーザーはAPPドメインへ
+      // 既存ユーザーはAPPドメインへ（仕様上、組織未所属は存在しない）
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://app.localhost:3000'
       return NextResponse.redirect(`${appUrl}${next}`)
     }
