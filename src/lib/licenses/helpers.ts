@@ -1,5 +1,6 @@
 // ライセンス管理ヘルパー関数
 import { createClient } from '@/lib/supabase/server'
+import { getAdminClient } from '@/lib/supabase/admin'
 import type { OrganizationLicense, LicensePlanType } from '@/types/database'
 
 /**
@@ -85,7 +86,8 @@ export async function createMockLicense(
   organizationId: string,
   planType: LicensePlanType
 ): Promise<OrganizationLicense | null> {
-  const supabase = await createClient()
+  // サービスロールクライアントを使用（RLSをバイパス）
+  const supabase = getAdminClient()
 
   // プランに応じたシート数を決定
   let totalSeats = 3

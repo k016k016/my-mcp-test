@@ -1,83 +1,123 @@
 // 管理画面トップページ（ADMINドメイン）
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+'use client'
+
+import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { getCurrentOrganizationId } from '@/lib/organization/current'
+import { useEffect, useState } from 'react'
 
-export default async function AdminPage() {
-  const supabase = await createClient()
+export default function AdminPage() {
+  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState<any>(null)
 
-  // ユーザー認証チェック
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  useEffect(() => {
+    async function loadData() {
+      const supabase = createClient()
 
-  if (!user) {
-    const wwwUrl = process.env.NEXT_PUBLIC_WWW_URL || 'http://localhost:3000'
-    redirect(`${wwwUrl}/login`)
+      // ユーザー認証チェック
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) {
+        const wwwUrl = process.env.NEXT_PUBLIC_WWW_URL || 'http://www.local.test:3000'
+        window.location.href = `${wwwUrl}/login`
+        return
+      }
+
+      // 現在の組織IDを取得
+      const organizationId = await getCurrentOrganizationId()
+
+      if (!organizationId) {
+        const wwwUrl = process.env.NEXT_PUBLIC_WWW_URL || 'http://www.local.test:3000'
+        window.location.href = `${wwwUrl}/onboarding/select-plan`
+        return
+      }
+
+      // 権限チェック（オーナーまたは管理者）
+      const { data: currentMember } = await supabase
+        .from('organization_members')
+        .select('role')
+        .eq('organization_id', organizationId)
+        .eq('user_id', user.id)
+        .is('deleted_at', null)
+        .single()
+
+      const isAdmin = currentMember?.role === 'owner' || currentMember?.role === 'admin'
+
+      if (!isAdmin) {
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://app.local.test:3000'
+        window.location.href = `${appUrl}?error=管理者権限がありません`
+        return
+      }
+
+      // 組織情報を取得
+      const { data: organization } = await supabase
+        .from('organizations')
+        .select('*')
+        .eq('id', organizationId)
+        .single()
+
+      // 自組織のメンバー数を取得
+      const { count: membersCount } = await supabase
+        .from('organization_members')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organizationId)
+        .is('deleted_at', null)
+
+      // 自組織の最近のメンバーを取得
+      const { data: recentMembers } = await supabase
+        .from('organization_members')
+        .select(`
+          id,
+          role,
+          created_at,
+          profile:profiles (
+            email,
+            full_name,
+            name
+          )
+        `)
+        .eq('organization_id', organizationId)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+        .limit(5)
+
+      // 使用量制限を取得
+      const { data: usageLimit } = await supabase
+        .from('usage_limits')
+        .select('*')
+        .eq('plan', organization?.subscription_plan || 'free')
+        .single()
+
+      setData({
+        organization,
+        membersCount,
+        recentMembers,
+        usageLimit,
+      })
+      setLoading(false)
+    }
+
+    loadData()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">読み込み中...</p>
+        </div>
+      </div>
+    )
   }
 
-  // 現在の組織IDを取得
-  const organizationId = await getCurrentOrganizationId()
-
-  if (!organizationId) {
-    redirect('/onboarding/create-organization')
+  if (!data) {
+    return null
   }
 
-  // 権限チェック（オーナーまたは管理者）
-  const { data: currentMember } = await supabase
-    .from('organization_members')
-    .select('role')
-    .eq('organization_id', organizationId)
-    .eq('user_id', user.id)
-    .is('deleted_at', null)
-    .single()
-
-  const isAdmin = currentMember?.role === 'owner' || currentMember?.role === 'admin'
-
-  if (!isAdmin) {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://app.localhost:3000'
-    redirect(`${appUrl}?error=管理者権限がありません`)
-  }
-
-  // 組織情報を取得
-  const { data: organization } = await supabase
-    .from('organizations')
-    .select('*')
-    .eq('id', organizationId)
-    .single()
-
-  // 自組織のメンバー数を取得
-  const { count: membersCount } = await supabase
-    .from('organization_members')
-    .select('*', { count: 'exact', head: true })
-    .eq('organization_id', organizationId)
-    .is('deleted_at', null)
-
-  // 自組織の最近のメンバーを取得
-  const { data: recentMembers } = await supabase
-    .from('organization_members')
-    .select(`
-      id,
-      role,
-      created_at,
-      profile:profiles (
-        email,
-        full_name,
-        name
-      )
-    `)
-    .eq('organization_id', organizationId)
-    .is('deleted_at', null)
-    .order('created_at', { ascending: false })
-    .limit(5)
-
-  // 使用量制限を取得
-  const { data: usageLimit } = await supabase
-    .from('usage_limits')
-    .select('*')
-    .eq('plan', organization?.subscription_plan || 'free')
-    .single()
+  const { organization, membersCount, recentMembers, usageLimit } = data
 
   return (
     <div>

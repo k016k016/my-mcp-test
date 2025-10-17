@@ -16,24 +16,9 @@ test.describe('組織管理', () => {
     await login(page, 'test@example.com', 'password123')
   })
 
-  test('組織作成フロー', async ({ page }) => {
-    // 組織作成ページに移動
-    await page.goto('http://app.localhost:3000/onboarding/create-organization')
-
-    // フォームに入力
-    const timestamp = Date.now()
-    const orgName = `テスト組織 ${timestamp}`
-    const orgSlug = `test-org-${timestamp}`
-
-    await page.fill('input[name="name"]', orgName)
-    await page.fill('input[name="slug"]', orgSlug)
-
-    // 組織を作成
-    await page.click('button[type="submit"]')
-
-    // ダッシュボードにリダイレクトされることを確認
-    await expect(page).toHaveURL('http://app.localhost:3000/')
-    await expect(page.locator(`text=${orgName}`)).toBeVisible()
+  test.skip('組織作成フロー', async ({ page }) => {
+    // TODO: サインアップフローに統合されたため、このテストは廃止
+    // 新しいサインアップE2Eテストで代替する必要がある
   })
 
   test('組織設定の編集', async ({ page }) => {

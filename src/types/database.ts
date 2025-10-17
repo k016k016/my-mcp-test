@@ -23,7 +23,6 @@ export type InvitationStatus = 'pending' | 'accepted' | 'expired'
 export interface Organization {
   id: string
   name: string
-  slug: string
 
   // サブスクリプション情報
   subscription_plan: SubscriptionPlan
@@ -196,12 +195,10 @@ export interface InvitationWithOrganization extends Invitation {
 
 export interface CreateOrganizationInput {
   name: string
-  slug: string
 }
 
 export interface UpdateOrganizationInput {
   name?: string
-  slug?: string
   metadata?: Record<string, any>
 }
 

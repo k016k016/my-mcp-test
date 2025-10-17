@@ -35,7 +35,7 @@ async function getRequestInfo() {
  */
 export async function createOrganization(input: CreateOrganizationInput | FormData) {
   try {
-    let validatedData: { name: string; slug: string }
+    let validatedData: { name: string }
     let planId: LicensePlanType | null = null
 
     // FormDataの場合とオブジェクトの場合を判定
@@ -66,23 +66,11 @@ export async function createOrganization(input: CreateOrganizationInput | FormDa
       return { error: '認証が必要です' }
     }
 
-    // slugの重複チェック
-    const { data: existing } = await supabase
-      .from('organizations')
-      .select('id')
-      .eq('slug', validatedData.slug)
-      .single()
-
-    if (existing) {
-      return { error: 'この組織IDは既に使用されています' }
-    }
-
     // 組織を作成
     const { data: organization, error: orgError } = await supabase
       .from('organizations')
       .insert({
         name: validatedData.name,
-        slug: validatedData.slug,
         subscription_plan: 'free',
         subscription_status: 'active',
       })
@@ -117,6 +105,9 @@ export async function createOrganization(input: CreateOrganizationInput | FormDa
       }
     }
 
+    // 現在の組織IDを設定
+    await setCurrentOrganizationId(organization.id)
+
     // 監査ログを記録
     const { ipAddress, userAgent } = await getRequestInfo()
     await supabase.from('audit_logs').insert({
@@ -125,7 +116,7 @@ export async function createOrganization(input: CreateOrganizationInput | FormDa
       action: 'organization.created',
       resource_type: 'organization',
       resource_id: organization.id,
-      details: { name: organization.name, slug: organization.slug, planId },
+      details: { name: organization.name, planId },
       ip_address: ipAddress,
       user_agent: userAgent,
     })
@@ -179,20 +170,6 @@ export async function updateOrganization(organizationId: string, input: UpdateOr
 
     if (!member || (member.role !== 'owner' && member.role !== 'admin')) {
       return { error: '権限がありません' }
-    }
-
-    // slugの重複チェック（slugを変更する場合）
-    if (validatedData.slug) {
-      const { data: existing } = await supabase
-        .from('organizations')
-        .select('id')
-        .eq('slug', validatedData.slug)
-        .neq('id', organizationId)
-        .single()
-
-      if (existing) {
-        return { error: 'この組織IDは既に使用されています' }
-      }
     }
 
     // 組織情報を更新
@@ -254,7 +231,6 @@ export async function getUserOrganizations() {
         organization:organizations (
           id,
           name,
-          slug,
           subscription_plan,
           subscription_status,
           created_at
@@ -395,6 +371,72 @@ export async function switchOrganization(organizationId: string) {
       throw error
     }
 
+    return { error: '予期しないエラーが発生しました。もう一度お試しください。' }
+  }
+}
+
+/**
+ * 決済完了後の処理: ライセンスを作成してADMINドメインにリダイレクト
+ */
+export async function completePayment(planId: LicensePlanType) {
+  try {
+    const supabase = await createClient()
+
+    // 現在のユーザーを取得
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
+
+    if (userError || !user) {
+      return { error: '認証が必要です' }
+    }
+
+    // 現在の組織を取得
+    const { data: memberships, error: memberError } = await supabase
+      .from('organization_members')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .limit(1)
+      .single()
+
+    if (memberError) {
+      console.error('[completePayment] Failed to fetch organization membership:', memberError)
+      console.error('[completePayment] User ID:', user.id)
+      return { error: '組織が見つかりませんでした。サインアップ時に組織が作成されていない可能性があります。' }
+    }
+
+    if (!memberships?.organization_id) {
+      console.error('[completePayment] No organization_id in membership data:', memberships)
+      return { error: '組織が見つかりませんでした' }
+    }
+
+    const orgId = memberships.organization_id
+    console.log('[completePayment] Found organization:', orgId)
+
+    // ライセンスを作成
+    const license = await createMockLicense(orgId, planId)
+    if (!license) {
+      return { error: 'ライセンスの作成に失敗しました' }
+    }
+
+    // 監査ログを記録
+    const { ipAddress, userAgent } = await getRequestInfo()
+    await supabase.from('audit_logs').insert({
+      organization_id: orgId,
+      user_id: user.id,
+      action: 'license.created',
+      resource_type: 'license',
+      resource_id: license.id,
+      details: { planId, plan_type: license.plan_type },
+      ip_address: ipAddress,
+      user_agent: userAgent,
+    })
+
+    revalidatePath('/', 'layout')
+    return { success: true }
+  } catch (error) {
+    console.error('[completePayment] Unexpected error:', error)
     return { error: '予期しないエラーが発生しました。もう一度お試しください。' }
   }
 }

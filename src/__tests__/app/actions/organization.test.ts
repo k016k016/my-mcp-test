@@ -71,12 +71,6 @@ describe('Organization Server Actions', () => {
       mockFrom.mockImplementation((table: string) => {
         if (table === 'organizations') {
           return {
-            // slug重複チェック用
-            select: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue({
-                single: vi.fn().mockResolvedValue({ data: null, error: null }),
-              }),
-            }),
             // 組織作成用
             insert: vi.fn().mockReturnValue({
               select: vi.fn().mockReturnValue({
@@ -84,7 +78,6 @@ describe('Organization Server Actions', () => {
                   data: {
                     id: TEST_ORG_ID,
                     name: 'Test Org',
-                    slug: 'test-org',
                     subscription_plan: 'free',
                   },
                   error: null,
@@ -108,44 +101,11 @@ describe('Organization Server Actions', () => {
 
       const result = await createOrganization({
         name: 'Test Org',
-        slug: 'test-org',
       })
 
       expect(result.success).toBe(true)
       expect(result.organization).toBeDefined()
       expect(result.organization?.name).toBe('Test Org')
-    })
-
-    it('無効なslugを拒否する', async () => {
-      const result = await createOrganization({
-        name: 'Test Org',
-        slug: 'Invalid Slug!',
-      })
-
-      expect(result.error).toBeTruthy()
-      expect(result.success).toBeUndefined()
-    })
-
-    it('重複したslugを拒否する', async () => {
-      const mockSelect = vi.fn().mockReturnThis()
-      const mockEq = vi.fn().mockReturnThis()
-      const mockSingle = vi.fn().mockResolvedValue({
-        data: { id: 'existing-org' },
-        error: null,
-      })
-
-      mockFrom.mockReturnValue({
-        select: mockSelect,
-        eq: mockEq,
-        single: mockSingle,
-      })
-
-      const result = await createOrganization({
-        name: 'Test Org',
-        slug: 'existing-slug',
-      })
-
-      expect(result.error).toContain('既に使用されています')
     })
 
     it('未認証ユーザーを拒否する', async () => {
@@ -156,7 +116,6 @@ describe('Organization Server Actions', () => {
 
       const result = await createOrganization({
         name: 'Test Org',
-        slug: 'test-org',
       })
 
       expect(result.error).toBe('認証が必要です')
@@ -168,12 +127,6 @@ describe('Organization Server Actions', () => {
       mockFrom.mockImplementation((table: string) => {
         if (table === 'organizations') {
           return {
-            // slug重複チェック用
-            select: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue({
-                single: vi.fn().mockResolvedValue({ data: null, error: null }),
-              }),
-            }),
             // 組織作成用
             insert: vi.fn().mockReturnValue({
               select: vi.fn().mockReturnValue({
@@ -181,7 +134,6 @@ describe('Organization Server Actions', () => {
                   data: {
                     id: TEST_ORG_ID,
                     name: 'Test Org',
-                    slug: 'test-org',
                   },
                   error: null,
                 }),
@@ -204,7 +156,6 @@ describe('Organization Server Actions', () => {
 
       await createOrganization({
         name: 'Test Org',
-        slug: 'test-org',
       })
 
       expect(mockAuditInsert).toHaveBeenCalledWith(
@@ -232,10 +183,6 @@ describe('Organization Server Actions', () => {
         }
         if (table === 'organizations') {
           return {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-            neq: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue({ data: null, error: null }),
             update: vi.fn().mockReturnValue({
               eq: vi.fn().mockReturnValue({
                 select: vi.fn().mockReturnValue({
@@ -243,7 +190,6 @@ describe('Organization Server Actions', () => {
                     data: {
                       id: TEST_ORG_ID,
                       name: 'Updated Org',
-                      slug: 'updated-org',
                     },
                     error: null,
                   }),
@@ -347,7 +293,6 @@ describe('Organization Server Actions', () => {
               organization: {
                 id: 'org-1',
                 name: 'Org 1',
-                slug: 'org-1',
               },
             },
             {
@@ -355,7 +300,6 @@ describe('Organization Server Actions', () => {
               organization: {
                 id: 'org-2',
                 name: 'Org 2',
-                slug: 'org-2',
               },
             },
           ],

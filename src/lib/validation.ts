@@ -87,23 +87,6 @@ export const updatePasswordSchema = z.object({
 // ============================================================================
 
 /**
- * 組織slugのバリデーション
- * - 3文字以上32文字以下
- * - 小文字英数字とハイフンのみ
- * - 先頭と末尾はハイフン不可
- */
-export const organizationSlugSchema = z
-  .string()
-  .min(3, '組織IDは3文字以上必要です')
-  .max(32, '組織IDは32文字以下である必要があります')
-  .regex(
-    /^[a-z0-9]+(-[a-z0-9]+)*$/,
-    '組織IDは小文字英数字とハイフン(-)のみ使用できます（先頭と末尾はハイフン不可）'
-  )
-  .toLowerCase()
-  .trim()
-
-/**
  * 組織名のバリデーション
  */
 export const organizationNameSchema = z
@@ -117,7 +100,6 @@ export const organizationNameSchema = z
  */
 export const createOrganizationSchema = z.object({
   name: organizationNameSchema,
-  slug: organizationSlugSchema,
 })
 
 /**
@@ -126,10 +108,9 @@ export const createOrganizationSchema = z.object({
 export const updateOrganizationSchema = z
   .object({
     name: organizationNameSchema.optional(),
-    slug: organizationSlugSchema.optional(),
     metadata: z.record(z.any()).optional(),
   })
-  .refine((data) => data.name || data.slug || data.metadata, {
+  .refine((data) => data.name || data.metadata, {
     message: '更新する項目を少なくとも1つ指定してください',
   })
 

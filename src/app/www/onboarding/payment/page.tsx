@@ -5,6 +5,7 @@ import { getPlanById, formatPrice } from '@/lib/plans/config'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect, Suspense } from 'react'
 import type { LicensePlanType } from '@/types/database'
+import { completePayment } from '@/app/actions/organization'
 
 function PaymentContent() {
   const router = useRouter()
@@ -33,9 +34,20 @@ function PaymentContent() {
       // モック: 2秒待機して決済完了をシミュレート
       await new Promise((resolve) => setTimeout(resolve, 2000))
 
-      // 決済成功後、組織作成ページへ遷移
-      // 実際の実装では、ここでWebhookが発火してorganization_licensesが作成される
-      router.push(`/onboarding/create-organization?plan=${planId}`)
+      // Server Actionで決済完了処理（ライセンス作成）
+      if (planId) {
+        const result = await completePayment(planId)
+
+        if (result.error) {
+          setError(result.error)
+          setIsProcessing(false)
+          return
+        }
+
+        // 決済成功後、ADMIN画面へ遷移
+        const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL || 'http://admin.local.test:3000'
+        window.location.href = adminUrl
+      }
     } catch (err) {
       setError('決済処理中にエラーが発生しました。もう一度お試しください。')
       setIsProcessing(false)
