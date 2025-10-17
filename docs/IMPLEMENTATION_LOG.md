@@ -1022,6 +1022,286 @@ className="text-gray-900 text-sm border border-gray-300 rounded px-2 py-1..."
 
 ---
 
+## 2025-01-18: UI改善とE2Eテストのシンプル化、slug削除
+
+### 📌 実装の背景
+
+1. **UI改善**: ユーザーから不要なフィールドを削除し、必要なフィールド（氏名）を追加する要望があった
+2. **E2Eテスト**: 未実装機能のテストが多く、メンテナンスコストが高かった。実装済み機能のみに絞ってシンプル化する必要があった
+3. **slug削除**: organizationsテーブルのslugカラムが使われておらず、Supabaseのスキーマキャッシュエラーの原因になっていた
+
+### 🎯 実装内容
+
+#### 1. APP profile設定の簡素化
+
+**ファイル**: `src/app/app/settings/profile/page.tsx`
+
+**削除したフィールド**:
+- 担当者名（name）入力フィールド
+- アバターURL（avatar_url）入力フィールド
+
+**動作**:
+- プロフィール設定が氏名（full_name）とメールアドレスのみのシンプルな構成に
+- 不要な情報入力を削減し、ユーザー体験を向上
+
+#### 2. ADMIN members一覧のカラムヘッダ変更
+
+**ファイル**: `src/app/admin/members/page.tsx`
+
+**変更内容**:
+```typescript
+// カラムヘッダを以下に変更
+<th>氏名</th>
+<th>メール</th>
+<th>ロール</th>
+<th>最終使用日</th>
+<th>アクション</th>
+```
+
+**動作**:
+- より直感的で分かりやすいカラム名に変更
+- ユーザーが情報を素早く把握できるように改善
+
+#### 3. ADMIN member招待に氏名フィールド追加
+
+**ファイル**:
+- `src/components/InviteMemberForm.tsx`
+- `src/app/actions/members.ts`
+- `src/lib/validation.ts`
+
+**追加したフィールド**:
+```typescript
+// InviteMemberForm.tsx
+const [fullName, setFullName] = useState('')
+
+<div>
+  <label htmlFor="fullName">氏名</label>
+  <input
+    id="fullName"
+    type="text"
+    required
+    value={fullName}
+    onChange={(e) => setFullName(e.target.value)}
+    placeholder="山田 太郎"
+  />
+</div>
+```
+
+**バリデーション更新**:
+```typescript
+// src/lib/validation.ts
+export const inviteMemberSchema = z.object({
+  organizationId: uuidSchema,
+  email: emailSchema,
+  fullName: z.string().min(1, '氏名を入力してください').max(100, '氏名は100文字以内で入力してください'),
+  role: organizationRoleSchema,
+})
+```
+
+**Server Action更新**:
+```typescript
+// src/app/actions/members.ts (ローカル環境)
+await supabase
+  .from('profiles')
+  .update({
+    full_name: validatedData.fullName,
+  })
+  .eq('id', newUser.user.id)
+```
+
+**動作**:
+- メンバー招待時に氏名を入力できるように
+- ローカル環境では招待時にプロフィールに氏名が自動設定される
+- より完全なメンバー情報が登録される
+
+#### 4. ADMIN organization設定からslug削除
+
+**ファイル**: `src/components/OrganizationSettingsForm.tsx`
+
+**削除した内容**:
+- slugフィールドの状態管理
+- slugフィールドの入力UI
+- FormDataへのslug追加処理
+
+**動作**:
+- 組織設定が組織名のみのシンプルな構成に
+- slugは使用していないため削除
+
+#### 5. データベースからslugカラム削除
+
+**マイグレーション**: `supabase/migrations/20250117130001_remove_slug_from_organizations.sql`
+
+```sql
+-- インデックスを削除
+DROP INDEX IF EXISTS idx_organizations_slug;
+
+-- slug列を削除
+ALTER TABLE organizations DROP COLUMN IF EXISTS slug;
+```
+
+**適用方法**:
+```bash
+# Supabase CLIでマイグレーション履歴を修復
+supabase migration repair --status reverted 20250118000001
+supabase migration repair --status applied 20250117130001
+```
+
+**動作**:
+- organizationsテーブルからslugカラムを完全に削除
+- Supabaseのスキーマキャッシュエラーを解消
+- INSERT時のエラーを防止
+
+#### 6. E2Eテストのシンプル化
+
+**削除したファイル**:
+- `e2e/auth-flow.spec.ts` - 未実装機能（パスワードリセット、OAuth詳細フロー）のテストを含む
+- `e2e/domain-auth.spec.ts` - ドメイン認証の詳細テスト（実装と乖離）
+
+**新規作成**: `e2e/auth.spec.ts`
+
+**テストケース（5つのコアテスト）**:
+```typescript
+test.describe('認証フロー', () => {
+  // 1. サインアップ → owner権限で組織作成 → 支払いページへ
+  test('サインアップ → owner権限で組織作成 → 支払いページへ', async ({ page }) => {
+    // サインアップ
+    // ✅ 支払いページに到達
+    // ✅ 組織が作成されている
+    // ✅ プラン選択UIが表示
+    // ✅ 決済完了後ADMINへ
+    // ✅ 自分がownerであることを確認
+  })
+
+  // 2. owner権限ユーザー → ADMINドメインにリダイレクト
+  test('owner権限ユーザー → ADMINドメインにリダイレクト', async ({ page }) => {
+    // owner@example.comでログイン
+    // ✅ ADMINドメインにリダイレクト
+  })
+
+  // 3. member権限ユーザー → APPドメインにリダイレクト
+  test('member権限ユーザー → APPドメインにリダイレクト', async ({ page }) => {
+    // member@example.comでログイン
+    // ✅ APPドメインにリダイレクト
+  })
+
+  // 4. 間違った認証情報 → エラー表示
+  test('間違った認証情報 → エラー表示', async ({ page }) => {
+    // 無効な認証情報でログイン
+    // ✅ エラーメッセージが表示
+  })
+
+  // 5. ログアウト → WWWドメインにリダイレクト
+  test('ログアウト → WWWドメインにリダイレクト', async ({ page }) => {
+    // ログイン → ログアウト
+    // ✅ WWWドメインにリダイレクト
+  })
+})
+```
+
+**ドメイン設定の修正**:
+```typescript
+// テストで使用するドメインを.local.testに変更
+const DOMAINS = {
+  WWW: 'http://www.local.test:3000',
+  APP: 'http://app.local.test:3000',
+  ADMIN: 'http://admin.local.test:3000',
+}
+```
+
+**動作**:
+- テストケース数: 27個 → 5個（実装済み機能のみ）
+- メンテナンス性: 大幅改善
+- ビジネスロジック: 重要な仕様を確実にカバー
+- Cookie共有の問題を解決（.local.testドメイン使用）
+
+#### 7. 認証フロー改善（ミドルウェア）
+
+**ファイル**: `src/middleware.ts`
+
+**追加内容**:
+```typescript
+// WWWドメインのログインページで、既にログイン済みの場合は適切なドメインにリダイレクト
+if (domain === DOMAINS.WWW && request.nextUrl.pathname === '/login') {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (user) {
+    // 運用担当者チェック
+    const isOps = await isOpsUser(user)
+    if (isOps) {
+      return NextResponse.redirect(new URL('/', opsUrl))
+    }
+
+    // 管理者権限チェック
+    const isAdmin = await hasAdminAccess(user)
+    if (isAdmin) {
+      return NextResponse.redirect(new URL('/', adminUrl))
+    }
+
+    // 組織メンバーシップチェック
+    const hasMembership = await hasOrganizationAccess(user)
+    if (hasMembership) {
+      return NextResponse.redirect(new URL('/', appUrl))
+    }
+
+    // 組織未所属の場合はオンボーディングへ
+    return NextResponse.redirect(new URL('/onboarding/create-organization', wwwBase))
+  }
+}
+```
+
+**ログインページの簡素化**: `src/app/(www)/login/page.tsx`
+
+```typescript
+// ログイン済みユーザーのリダイレクト処理はミドルウェアで行われます
+import LoginForm from '@/components/LoginForm'
+
+export default function LoginPage() {
+  return <LoginForm />
+}
+```
+
+**動作**:
+- ログイン済みユーザーが`/login`にアクセスした場合、ミドルウェアで即座にリダイレクト
+- Server ComponentでCookieを設定しようとするエラーを回避
+- より安全でクリーンな実装
+
+### 📁 変更ファイル一覧
+
+| ファイル | 変更内容 | タイプ |
+|---------|---------|--------|
+| `src/app/app/settings/profile/page.tsx` | 担当者名・アバターURL削除 | 変更 |
+| `src/app/admin/members/page.tsx` | カラムヘッダを「氏名・メール・ロール・最終使用日・アクション」に変更 | 変更 |
+| `src/components/InviteMemberForm.tsx` | 氏名入力フィールド追加 | 変更 |
+| `src/app/actions/members.ts` | 氏名をプロフィールに設定 | 変更 |
+| `src/lib/validation.ts` | inviteMemberSchemaに氏名フィールド追加 | 変更 |
+| `src/components/OrganizationSettingsForm.tsx` | slugフィールド削除 | 変更 |
+| `supabase/migrations/20250117130001_remove_slug_from_organizations.sql` | slugカラム削除マイグレーション | 既存 |
+| `e2e/auth-flow.spec.ts` | 削除 | 削除 |
+| `e2e/domain-auth.spec.ts` | 削除 | 削除 |
+| `e2e/auth.spec.ts` | 新しいシンプルなテスト | 新規 |
+| `src/middleware.ts` | ログイン済みユーザーのリダイレクト処理追加 | 変更 |
+| `src/app/(www)/login/page.tsx` | ミドルウェアに処理を移動、シンプル化 | 変更 |
+
+### ✅ テスト項目
+
+- [x] APP profile設定で担当者名・アバターURLが削除されている
+- [x] ADMIN members一覧のカラムヘッダが変更されている
+- [x] ADMIN member招待で氏名が入力できる
+- [x] ローカル環境で招待したメンバーに氏名が設定される
+- [x] ADMIN organization設定でslugフィールドが削除されている
+- [x] データベースからslugカラムが削除されている
+- [ ] E2Eテストが.local.testドメインで正しく動作する
+- [x] ログイン済みユーザーがWWWログインページにアクセスすると即座にリダイレクト
+
+### 🔗 関連リンク
+
+- E2Eテスト: `e2e/auth.spec.ts`
+- マイグレーション: `supabase/migrations/20250117130001_remove_slug_from_organizations.sql`
+- 認証ミドルウェア: `src/middleware.ts`
+
+---
+
 ## テンプレート（次回の実装記録用）
 
 ```markdown
