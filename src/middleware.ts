@@ -76,8 +76,13 @@ export async function middleware(request: NextRequest) {
         const hasAdminPermission = await hasAdminAccess(user)
         if (!hasAdminPermission) {
           // 管理者権限がない場合はAPP画面へ
-          const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://app.localhost:3000'
-          return NextResponse.redirect(`${appUrl}?message=管理者権限がありません`)
+					// OK
+					const appBase = process.env.NEXT_PUBLIC_APP_URL || 'http://app.localhost:3000'
+					const to = new URL('/', appBase)
+					to.searchParams.set('message', '管理者権限がありません')
+					return NextResponse.redirect(to)
+          // const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://app.localhost:3000'
+          // return NextResponse.redirect(`${appUrl}?message=管理者権限がありません`)
         }
       }
     }

@@ -47,7 +47,10 @@ export default function AdminPage() {
 
       if (!isAdmin) {
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://app.local.test:3000'
-        window.location.href = `${appUrl}?error=管理者権限がありません`
+        const q = `?${new URLSearchParams({ error: '管理者権限がありません' })}`;
+				// window.location.href = `${appUrl}?error=管理者権限がありません`
+				// 例：URLに付与
+				window.location.assign(appUrl + '/' + q);
         return
       }
 

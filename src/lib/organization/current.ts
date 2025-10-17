@@ -35,7 +35,7 @@ export async function setCurrentOrganizationId(organizationId: string) {
   if (process.env.NEXT_PUBLIC_COOKIE_DOMAIN) {
     cookieOptions.domain = process.env.NEXT_PUBLIC_COOKIE_DOMAIN
   } else if (process.env.NODE_ENV === 'development') {
-    cookieOptions.domain = '.localhost.test'
+    cookieOptions.domain = '.local.test'
   }
 
   cookieStore.set(CURRENT_ORG_COOKIE, organizationId, cookieOptions)

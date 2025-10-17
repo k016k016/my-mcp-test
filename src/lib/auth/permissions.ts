@@ -115,15 +115,10 @@ export async function getUserPermissionLevel(user: User): Promise<{
 
 /**
  * 権限に基づくリダイレクト先を決定
- * ユーザーが組織に所属している場合、最初の組織を現在の組織として設定
+ * 注意: このままでは使用できません。ログインアクション内で使用してください。
  */
 export async function getRedirectUrlForUser(user: User): Promise<string> {
   const permissions = await getUserPermissionLevel(user)
-
-  // ユーザーが組織に所属している場合、最初の組織を現在の組織として設定
-  if (permissions.organizations.length > 0) {
-    await setCurrentOrganizationId(permissions.organizations[0].id)
-  }
 
   // 運用担当者はOPS画面へ
   if (permissions.isOps) {
