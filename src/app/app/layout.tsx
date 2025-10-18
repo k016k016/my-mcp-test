@@ -101,6 +101,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                 >
                   プロフィール設定
                 </a>
+                <a
+                  href="/organization"
+                  className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                >
+                  組織情報
+                </a>
                 {isAdmin && (
                   <a
                     href={process.env.NEXT_PUBLIC_ADMIN_URL || 'http://admin.localhost:3000'}
