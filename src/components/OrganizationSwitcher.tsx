@@ -14,11 +14,13 @@ interface Organization {
 interface OrganizationSwitcherProps {
   organizations: Organization[]
   currentOrganizationId: string
+  'data-testid'?: string
 }
 
 export default function OrganizationSwitcher({
   organizations,
   currentOrganizationId,
+  'data-testid': testId,
 }: OrganizationSwitcherProps) {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
@@ -45,7 +47,7 @@ export default function OrganizationSwitcher({
   }
 
   return (
-    <div className="relative">
+    <div className="relative" data-testid={testId}>
       {/* 現在の組織表示ボタン */}
       <button
         onClick={() => setIsOpen(!isOpen)}

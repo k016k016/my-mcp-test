@@ -12,27 +12,27 @@ export type UserType = 'ops' | 'admin' | 'owner' | 'member' | 'no-org'
 export const TEST_USERS = {
   ops: {
     email: 'ops@example.com',
-    password: 'OpsPassword123!',
+    password: 'test1234',
     metadata: { is_ops: true },
   },
   admin: {
     email: 'admin@example.com',
-    password: 'AdminPassword123!',
+    password: 'test1234',
     role: 'admin',
   },
   owner: {
     email: 'owner@example.com',
-    password: 'OwnerPassword123!',
+    password: 'test1234',
     role: 'owner',
   },
   member: {
     email: 'member@example.com',
-    password: 'MemberPassword123!',
+    password: 'test1234',
     role: 'member',
   },
   'no-org': {
     email: 'noorg@example.com',
-    password: 'NoOrgPassword123!',
+    password: 'test1234',
   },
 } as const
 
@@ -57,13 +57,37 @@ export async function loginAs(page: Page, userType: UserType) {
     ? `${DOMAINS.OPS}/login`
     : `${DOMAINS.WWW}/login`
 
-  await page.goto(loginUrl)
-  await page.fill('input[name="email"]', user.email)
-  await page.fill('input[name="password"]', user.password)
-  await page.click('button[type="submit"]')
+  await page.goto(loginUrl, { waitUntil: 'networkidle' })
 
-  // ログイン後のリダイレクトを待機
+  // フォームが表示されるまで待機
+  await page.waitForSelector('input[name="email"]', { state: 'visible' })
+  await page.waitForSelector('input[name="password"]', { state: 'visible' })
+
+  // 入力フィールドに値を入力（pressSequentiallyでより確実に）
+  await page.locator('input[name="email"]').fill(user.email)
+  await page.locator('input[name="password"]').fill(user.password)
+
+  // 入力値が確実に設定されたか確認
+  await page.waitForFunction(
+    ({ email, password }) => {
+      const emailInput = document.querySelector('input[name="email"]') as HTMLInputElement
+      const passwordInput = document.querySelector('input[name="password"]') as HTMLInputElement
+      return emailInput?.value === email && passwordInput?.value === password
+    },
+    { email: user.email, password: user.password },
+    { timeout: 5000 }
+  )
+
+  // submitボタンを待機してからクリック（完全一致で"ログイン"のみを対象）
+  const submitButton = page.getByRole('button', { name: 'ログイン', exact: true })
+  await submitButton.waitFor({ state: 'visible' })
+  await submitButton.click()
+
+  // ログイン後のリダイレクトを待機（より長いタイムアウト）
   await page.waitForURL(/local\.test:3000/, { timeout: 10000 })
+
+  // ページが完全にロードされるまで待機
+  await page.waitForLoadState('networkidle')
 }
 
 /**

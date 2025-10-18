@@ -125,12 +125,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                   <OrganizationSwitcher
                     organizations={organizations}
                     currentOrganizationId={currentOrgId}
+                    data-testid="organization-switcher"
                   />
                 </div>
               )}
 
               {/* ユーザーメニュー */}
-              <div className="flex items-center gap-3 px-3 py-2 bg-slate-100 rounded-xl">
+              <div data-testid="user-menu" className="flex items-center gap-3 px-3 py-2 bg-slate-100 rounded-xl">
                 <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white font-semibold shadow-md">
                   {profile?.full_name?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase()}
                 </div>
