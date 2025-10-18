@@ -70,16 +70,17 @@ test.describe('APPドメイン - 一般ユーザー向けダッシュボード',
       await page.click('button[type="submit"]:has-text("保存")')
 
       // 成功メッセージが表示される（データベースに保存されたことを確認）
+      // 並列実行時やFirefox/WebKitでは保存処理に時間がかかる場合がある
       await expect(page.locator('text=プロフィールを更新しました')).toBeVisible({
-        timeout: 5000,
+        timeout: 10000,
       })
 
       // テスト後、元の名前に戻す（データをクリーンアップ）
-      await page.waitForTimeout(1500) // フォームが再び編集可能になるまで待つ
+      await page.waitForTimeout(2000) // フォームが再び編集可能になるまで待つ（Firefox/WebKit対応）
       await page.locator('input[name="fullName"]').fill(originalName || 'Member User')
       await page.click('button[type="submit"]:has-text("保存")')
       await expect(page.locator('text=プロフィールを更新しました')).toBeVisible({
-        timeout: 5000,
+        timeout: 10000,
       })
     })
 

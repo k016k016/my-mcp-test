@@ -8,7 +8,8 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  // ローカルでは2ワーカー、CIでは1ワーカー（セッション競合を軽減）
+  workers: process.env.CI ? 1 : 2,
   reporter: 'html',
 
   // テストタイムアウト：ブラウザの遅さを考慮して長めに設定
