@@ -34,11 +34,10 @@ test.describe('APPドメイン - 一般ユーザー向けダッシュボード',
   })
 
   test.describe('2. プロフィール設定', () => {
-    test.beforeEach(async ({ page }) => {
-      await loginAsMember(page)
-    })
-
     test('2-1. プロフィール情報の表示', async ({ page }) => {
+      // ログイン
+      await loginAsMember(page)
+
       // プロフィール設定ページに移動
       await page.goto(`${DOMAINS.APP}/settings/profile`, { waitUntil: 'networkidle' })
 
@@ -56,6 +55,9 @@ test.describe('APPドメイン - 一般ユーザー向けダッシュボード',
     })
 
     test('2-2. プロフィール情報の更新（名前変更）', async ({ page }) => {
+      // ログイン
+      await loginAsMember(page)
+
       await page.goto(`${DOMAINS.APP}/settings/profile`, { waitUntil: 'networkidle' })
 
       // 元の名前を取得
@@ -82,6 +84,9 @@ test.describe('APPドメイン - 一般ユーザー向けダッシュボード',
     })
 
     test('2-3. パスワード変更', async ({ page }) => {
+      // ログイン
+      await loginAsMember(page)
+
       await page.goto(`${DOMAINS.APP}/settings/profile`, { waitUntil: 'networkidle' })
 
       // 新しいパスワードを入力
@@ -101,6 +106,9 @@ test.describe('APPドメイン - 一般ユーザー向けダッシュボード',
     })
 
     test('2-4. パスワード変更エラー（パスワード不一致）', async ({ page }) => {
+      // ログイン
+      await loginAsMember(page)
+
       await page.goto(`${DOMAINS.APP}/settings/profile`, { waitUntil: 'networkidle' })
 
       // 新しいパスワードと確認パスワードを異なる値で入力
