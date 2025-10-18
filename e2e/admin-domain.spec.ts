@@ -10,7 +10,7 @@ test.describe('ADMINドメイン - 管理画面', () => {
       await page.goto(DOMAINS.ADMIN)
 
       // ADMINドメインにアクセスできる
-      await expect(page).toHaveURL(/admin\.localhost:3000/)
+      await expect(page).toHaveURL(/admin\.local\.test:3000/)
     })
 
     test('owner権限でアクセスできる', async ({ page }) => {
@@ -19,7 +19,7 @@ test.describe('ADMINドメイン - 管理画面', () => {
       await page.goto(DOMAINS.ADMIN)
 
       // ADMINドメインにアクセスできる
-      await expect(page).toHaveURL(/admin\.localhost:3000/)
+      await expect(page).toHaveURL(/admin\.local\.test:3000/)
     })
   })
 

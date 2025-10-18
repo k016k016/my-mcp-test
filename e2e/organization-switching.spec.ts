@@ -19,7 +19,7 @@ test.describe('組織切り替え - AUTH_FLOW_SPECIFICATION準拠', () => {
       await page.click('[data-testid="org-option-admin"]')
 
       // ADMINドメインにリダイレクトされることを確認
-      await expect(page).toHaveURL(/admin\.localhost:3000/, { timeout: 5000 })
+      await expect(page).toHaveURL(/admin\.local.test:3000/, { timeout: 5000 })
     })
 
     test('組織B (APP権限のみ) → app.xxx.com にリダイレクト', async ({
@@ -37,7 +37,7 @@ test.describe('組織切り替え - AUTH_FLOW_SPECIFICATION準拠', () => {
       await page.click('[data-testid="org-option-member"]')
 
       // APPドメインに留まることを確認
-      await expect(page).toHaveURL(/app\.localhost:3000/, { timeout: 5000 })
+      await expect(page).toHaveURL(/app\.local.test:3000/, { timeout: 5000 })
     })
 
     test('組織C (ADMIN権限) → admin.xxx.com にリダイレクト', async ({
@@ -56,7 +56,7 @@ test.describe('組織切り替え - AUTH_FLOW_SPECIFICATION準拠', () => {
       await page.click('[data-testid="org-option-admin-2"]')
 
       // ADMINドメインにリダイレクトされることを確認
-      await expect(page).toHaveURL(/admin\.localhost:3000/, { timeout: 5000 })
+      await expect(page).toHaveURL(/admin\.local.test:3000/, { timeout: 5000 })
     })
   })
 
@@ -76,7 +76,7 @@ test.describe('組織切り替え - AUTH_FLOW_SPECIFICATION準拠', () => {
       ).toBeVisible({ timeout: 5000 })
 
       // APPドメインにリダイレクトされる
-      await expect(page).toHaveURL(/app\.localhost:3000/, { timeout: 5000 })
+      await expect(page).toHaveURL(/app\.local.test:3000/, { timeout: 5000 })
     })
 
     test('組織切り替え時、権限不足の場合はエラー表示', async ({ page }) => {
@@ -101,7 +101,7 @@ test.describe('組織切り替え - AUTH_FLOW_SPECIFICATION準拠', () => {
       ).toBeVisible()
 
       // APPドメインにリダイレクトされる
-      await expect(page).toHaveURL(/app\.localhost:3000/, { timeout: 5000 })
+      await expect(page).toHaveURL(/app\.local.test:3000/, { timeout: 5000 })
     })
   })
 

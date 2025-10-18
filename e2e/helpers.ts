@@ -37,13 +37,13 @@ export const TEST_USERS = {
 } as const
 
 /**
- * ドメインURL
+ * ドメインURL（環境変数から取得、Vercel Previewでも動作）
  */
 export const DOMAINS = {
-  WWW: 'http://localhost:3000',
-  APP: 'http://app.localhost:3000',
-  ADMIN: 'http://admin.localhost:3000',
-  OPS: 'http://ops.localhost:3000',
+  WWW: process.env.NEXT_PUBLIC_WWW_URL || 'http://www.local.test:3000',
+  APP: process.env.NEXT_PUBLIC_APP_URL || 'http://app.local.test:3000',
+  ADMIN: process.env.NEXT_PUBLIC_ADMIN_URL || 'http://admin.local.test:3000',
+  OPS: process.env.NEXT_PUBLIC_OPS_URL || 'http://ops.local.test:3000',
 } as const
 
 /**
@@ -63,7 +63,7 @@ export async function loginAs(page: Page, userType: UserType) {
   await page.click('button[type="submit"]')
 
   // ログイン後のリダイレクトを待機
-  await page.waitForURL(/localhost:3000/, { timeout: 10000 })
+  await page.waitForURL(/local\.test:3000/, { timeout: 10000 })
 }
 
 /**
@@ -110,7 +110,7 @@ export async function logout(page: Page) {
   // ログアウトボタンをクリック
   await page.click('text=ログアウト')
   // WWWドメインにリダイレクトされることを確認
-  await page.waitForURL(/^http:\/\/localhost:3000/)
+  await page.waitForURL(/^http:\/\/www\.local\.test:3000/)
 }
 
 /**
