@@ -40,7 +40,7 @@ test.describe('APPドメイン - 一般ユーザー向けダッシュボード',
 
     test('2-1. プロフィール情報の表示', async ({ page }) => {
       // プロフィール設定ページに移動
-      await page.goto(`${DOMAINS.APP}/settings/profile`)
+      await page.goto(`${DOMAINS.APP}/settings/profile`, { waitUntil: 'networkidle' })
 
       // プロフィール設定ページが表示される
       await expect(page.locator('h1:has-text("プロフィール設定")')).toBeVisible()
@@ -56,10 +56,7 @@ test.describe('APPドメイン - 一般ユーザー向けダッシュボード',
     })
 
     test('2-2. プロフィール情報の更新（名前変更）', async ({ page }) => {
-      await page.goto(`${DOMAINS.APP}/settings/profile`)
-
-      // ページがロードされるまで待機
-      await page.waitForLoadState('networkidle')
+      await page.goto(`${DOMAINS.APP}/settings/profile`, { waitUntil: 'networkidle' })
 
       // 名前フィールドを変更
       await page.fill('input[name="fullName"]', 'Updated Member')
@@ -80,10 +77,7 @@ test.describe('APPドメイン - 一般ユーザー向けダッシュボード',
     })
 
     test('2-3. パスワード変更', async ({ page }) => {
-      await page.goto(`${DOMAINS.APP}/settings/profile`)
-
-      // ページがロードされるまで待機
-      await page.waitForLoadState('networkidle')
+      await page.goto(`${DOMAINS.APP}/settings/profile`, { waitUntil: 'networkidle' })
 
       // 新しいパスワードを入力
       await page.fill('input[name="newPassword"]', 'newpass123')
@@ -102,10 +96,7 @@ test.describe('APPドメイン - 一般ユーザー向けダッシュボード',
     })
 
     test('2-4. パスワード変更エラー（パスワード不一致）', async ({ page }) => {
-      await page.goto(`${DOMAINS.APP}/settings/profile`)
-
-      // ページがロードされるまで待機
-      await page.waitForLoadState('networkidle')
+      await page.goto(`${DOMAINS.APP}/settings/profile`, { waitUntil: 'networkidle' })
 
       // 新しいパスワードと確認パスワードを異なる値で入力
       await page.fill('input[name="newPassword"]', 'newpass123')
@@ -122,13 +113,12 @@ test.describe('APPドメイン - 一般ユーザー向けダッシュボード',
   })
 
   test.describe('3. 組織情報の閲覧', () => {
-    test.beforeEach(async ({ page }) => {
-      await loginAsMember(page)
-    })
-
     test('3-1. 所属組織情報の表示', async ({ page }) => {
+      // ログイン
+      await loginAsMember(page)
+
       // 組織情報ページに移動
-      await page.goto(`${DOMAINS.APP}/organization`)
+      await page.goto(`${DOMAINS.APP}/organization`, { waitUntil: 'networkidle' })
 
       // 組織情報ページが表示される
       await expect(page.locator('h1:has-text("組織情報")')).toBeVisible()
@@ -144,7 +134,11 @@ test.describe('APPドメイン - 一般ユーザー向けダッシュボード',
     })
 
     test('3-2. member権限ユーザーが編集不可であることを確認', async ({ page }) => {
-      await page.goto(`${DOMAINS.APP}/organization`)
+      // ログイン
+      await loginAsMember(page)
+
+      // 組織情報ページに移動
+      await page.goto(`${DOMAINS.APP}/organization`, { waitUntil: 'networkidle' })
 
       // 編集不可のメッセージが表示される
       await expect(

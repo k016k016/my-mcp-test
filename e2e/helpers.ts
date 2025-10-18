@@ -83,8 +83,9 @@ export async function loginAs(page: Page, userType: UserType) {
   await submitButton.waitFor({ state: 'visible' })
   await submitButton.click()
 
-  // ログイン後のリダイレクトを待機（より長いタイムアウト）
-  await page.waitForURL(/local\.test:3000/, { timeout: 10000 })
+  // ログイン後のリダイレクトを待機（WWWドメイン以外にリダイレクトされるまで待つ）
+  // Firefox/Webkitはリダイレクトが遅いため、タイムアウトを長めに設定
+  await page.waitForURL((url) => !url.toString().includes('www.local.test'), { timeout: 15000 })
 
   // ページが完全にロードされるまで待機
   await page.waitForLoadState('networkidle')
