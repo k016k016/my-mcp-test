@@ -187,6 +187,7 @@ export default function ProfilePage() {
             </label>
             <input
               id="email"
+              name="email"
               type="email"
               disabled
               value={email}
@@ -203,6 +204,7 @@ export default function ProfilePage() {
             </label>
             <input
               id="fullName"
+              name="fullName"
               type="text"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
@@ -231,7 +233,7 @@ export default function ProfilePage() {
               disabled={saving}
               className="w-full flex justify-center py-3 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg transition-all"
             >
-              {saving ? '保存中...' : '変更を保存'}
+              {saving ? '保存中...' : '保存'}
             </button>
           </div>
         </form>
@@ -263,6 +265,7 @@ export default function ProfilePage() {
             </label>
             <input
               id="newPassword"
+              name="newPassword"
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
@@ -278,6 +281,7 @@ export default function ProfilePage() {
             </label>
             <input
               id="confirmPassword"
+              name="confirmPassword"
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
