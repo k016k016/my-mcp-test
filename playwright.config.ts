@@ -11,6 +11,9 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
 
+  // テストタイムアウト：ブラウザの遅さを考慮して長めに設定
+  timeout: 60000, // 60秒（デフォルトの30秒から延長）
+
   // グローバルセットアップ・ティアダウン
   globalSetup: './e2e/global-setup.ts',
   globalTeardown: './e2e/global-teardown.ts',
@@ -23,15 +26,30 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        // Chromiumは高速なので標準タイムアウト
+        navigationTimeout: 30000,
+        actionTimeout: 10000,
+      },
     },
     {
       name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
+      use: {
+        ...devices['Desktop Firefox'],
+        // Firefoxは若干遅いのでタイムアウトを延長
+        navigationTimeout: 45000,
+        actionTimeout: 15000,
+      },
     },
     {
       name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
+      use: {
+        ...devices['Desktop Safari'],
+        // WebKitは最も遅いのでタイムアウトを最長に
+        navigationTimeout: 60000,
+        actionTimeout: 20000,
+      },
     },
   ],
 

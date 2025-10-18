@@ -81,14 +81,27 @@ export async function loginAs(page: Page, userType: UserType) {
   // submitボタンを待機してからクリック（完全一致で"ログイン"のみを対象）
   const submitButton = page.getByRole('button', { name: 'ログイン', exact: true })
   await submitButton.waitFor({ state: 'visible' })
+
+  // クリック前の現在URLを記録
+  const beforeUrl = page.url()
+
   await submitButton.click()
 
   // ログイン後のリダイレクトを待機（WWWドメイン以外にリダイレクトされるまで待つ）
   // Firefox/Webkitはリダイレクトが遅いため、タイムアウトを長めに設定
-  await page.waitForURL((url) => !url.toString().includes('www.local.test'), { timeout: 15000 })
+  // また、URLが変わったことを確実に確認
+  await page.waitForURL((url) => {
+    const urlStr = url.toString()
+    const isNotWWW = !urlStr.includes('www.local.test')
+    const hasChanged = urlStr !== beforeUrl
+    return isNotWWW && hasChanged
+  }, { timeout: 30000 }) // より長いタイムアウト
 
   // ページが完全にロードされるまで待機
   await page.waitForLoadState('networkidle')
+
+  // 追加の安定性確保：DOM が準備完了まで待機
+  await page.waitForLoadState('domcontentloaded')
 }
 
 /**
