@@ -1433,6 +1433,192 @@ const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000'
 
 ---
 
+## 2025-10-18: E2Eテスト仕様書の整理と作成
+
+### 📌 実装の背景
+
+E2Eテストの仕様が不明確で、以下の問題がありました：
+
+1. **不要なテストファイル**: 未実装機能のテストファイル（`member-invitation.spec.ts`、`domain-layouts.spec.ts`）が存在し、実装との乖離が発生
+2. **仕様書の不足**: 各ドメイン（APP、ADMIN、OPS）と組織切り替え機能のE2Eテスト仕様が文書化されていない
+3. **実装優先度の不明確さ**: どの機能を先に実装すべきか、Phase分けが曖昧
+
+### 🎯 実装内容
+
+#### 1. 不要なE2Eテストファイルの削除（2ファイル）
+
+**削除したファイル**:
+- `e2e/member-invitation.spec.ts` - メンバー招待機能が未実装のため
+- `e2e/domain-layouts.spec.ts` - デザインが未確定のため
+
+**削除後のテストファイル構成（4ファイル）**:
+1. ✅ `e2e/auth.spec.ts` - 認証フロー（実装済み）
+2. ⏳ `e2e/organization-switching.spec.ts` - 組織切り替え（実装待ち）
+3. ⏳ `e2e/admin-domain.spec.ts` - ADMINドメイン（実装待ち）
+4. ⏳ `e2e/ops-domain.spec.ts` - OPSドメイン（実装待ち）
+
+**新規追加が必要**: `e2e/app-domain.spec.ts`（仕様書作成済み、テストファイル未作成）
+
+#### 2. E2Eテスト仕様書の作成（4ファイル）
+
+既存実装を無視し、理想的なマルチテナントSaaSのE2Eテスト仕様を新規作成しました。
+
+##### **`docs/specifications/E2E_TEST_APP_DOMAIN.md`**
+**APPドメイン（一般ユーザー向け）のテスト仕様**
+
+**Phase 1 MVP**:
+- ダッシュボード表示（ウェルカムメッセージ、組織情報、ロール表示）
+- プロフィール設定（名前、メールアドレス、パスワード変更）
+- 組織情報の閲覧（編集権限なし）
+
+**使用アカウント**: `member@example.com`
+
+**Phase 3（後回し）**: 通知機能
+
+##### **`docs/specifications/E2E_TEST_ADMIN_DOMAIN.md`**
+**ADMINドメイン（組織管理）のテスト仕様**
+
+**Phase 1 MVP**:
+- 組織情報の編集（組織名、スラッグ、設定）
+- メンバー管理（招待、削除、権限変更）
+- プロフィール設定
+
+**Phase 2**:
+- サブスクリプション管理（プラン変更、支払い情報更新）
+- 使用量モニタリング
+- 監査ログ閲覧
+
+**環境別の挙動**:
+- ローカル環境: メンバー招待時にメール送信なし、パスワード固定（`password123`）
+- Vercel環境: 招待メール送信、ユーザーが自分でパスワード設定
+
+**使用アカウント**: `owner@example.com`, `admin@example.com`
+
+##### **`docs/specifications/E2E_TEST_OPS_DOMAIN.md`**
+**OPSドメイン（システム管理）のテスト仕様**
+
+**Phase 1 MVP**:
+- OPS専用ログイン（`ops.local.test:3000/login`）
+- IP制限チェック（許可されたIPアドレスのみアクセス可能）
+- 全組織一覧表示
+- 全ユーザー一覧表示
+
+**Phase 2**:
+- 組織詳細の確認・編集
+- ユーザー詳細の確認・編集
+- システム統計情報
+- システムログ閲覧
+
+**IP制限の仕様**:
+- 環境変数: `OPS_ALLOWED_IPS=192.168.1.100,10.0.0.50`
+- ミドルウェアで判定（`src/middleware.ts`）
+- 未設定時は制限なし（開発環境用）
+
+**使用アカウント**: `ops@example.com`
+
+##### **`docs/specifications/E2E_TEST_ORG_SWITCHING.md`**
+**組織切り替え機能のテスト仕様**
+
+**Phase 1 MVP**:
+- 組織切り替えUI表示（複数組織に所属している場合）
+- 組織切り替え実行（ドロップダウンから選択）
+- Cookie更新確認（`current_organization_id`）
+- データ表示更新（切り替え後に新しい組織のデータを表示）
+
+**Phase 2**:
+- 権限別リダイレクト（切り替え先の権限に応じてドメインをリダイレクト）
+- 組織未所属の場合のエラーハンドリング
+
+**Cookie設計**:
+- Cookie名: `current_organization_id`
+- ドメイン: `.local.test`（サブドメイン間で共有）
+- HTTPOnly: `true`（セキュリティ）
+- SameSite: `lax`
+
+**使用アカウント**: `multiorg@example.com`（複数組織に所属、手動で作成が必要）
+
+#### 3. 仕様書の特徴
+
+- **既存実装を無視**: 現在の実装に縛られず、理想的なマルチテナントSaaSの仕様を定義
+- **フェーズ分け**: MVP（Phase 1）と拡張機能（Phase 2, 3）を明確に分離
+- **詳細なテストケース**: 前提条件、操作手順、期待結果を明記
+- **環境別の挙動**: ローカル環境とVercel環境の違いを記載
+- **テストアカウント一覧**: 各テストで使用するアカウントを表形式で整理
+- **実装優先度**: 各機能の優先度を🔴高、🟡中、🟢低で明示
+
+### 📁 変更ファイル一覧
+
+| ファイル | 変更内容 | タイプ |
+|---------|---------|--------|
+| `e2e/member-invitation.spec.ts` | 削除（未実装機能） | 削除 |
+| `e2e/domain-layouts.spec.ts` | 削除（デザイン未確定） | 削除 |
+| `docs/specifications/E2E_TEST_APP_DOMAIN.md` | APPドメインのE2Eテスト仕様 | 新規 |
+| `docs/specifications/E2E_TEST_ADMIN_DOMAIN.md` | ADMINドメインのE2Eテスト仕様 | 新規 |
+| `docs/specifications/E2E_TEST_OPS_DOMAIN.md` | OPSドメインのE2Eテスト仕様 | 新規 |
+| `docs/specifications/E2E_TEST_ORG_SWITCHING.md` | 組織切り替え機能のE2Eテスト仕様 | 新規 |
+
+### ✅ 効果・改善点
+
+- ✅ **テスト仕様の明確化**: 各ドメインと機能のテスト要件が文書化された
+- ✅ **実装優先度の可視化**: Phase分けにより、何を先に実装すべきかが明確に
+- ✅ **不要なテストの削除**: 未実装機能のテストファイルがなくなりメンテナンス性向上
+- ✅ **環境別の挙動を明記**: ローカルとVercel環境の違いを仕様書に記載
+- ✅ **Cookie設計の文書化**: 組織切り替えに必要なCookie仕様を明確化
+
+### 📊 テストファイル数の変化
+
+```
+削除前: 6ファイル
+ ├─ auth.spec.ts ✅
+ ├─ admin-domain.spec.ts ⏳
+ ├─ domain-layouts.spec.ts ⏳
+ ├─ member-invitation.spec.ts ⏳
+ ├─ ops-domain.spec.ts ⏳
+ └─ organization-switching.spec.ts ⏳
+
+削除後: 4ファイル（実装済み1 + 実装待ち3）
+ ├─ auth.spec.ts ✅ 認証フロー（実装済み）
+ ├─ organization-switching.spec.ts ⏳ 実装待ち
+ ├─ admin-domain.spec.ts ⏳ 実装待ち
+ └─ ops-domain.spec.ts ⏳ 実装待ち
+
+削減率: 約33%減（6 → 4ファイル）
+```
+
+### 🔧 技術的なポイント
+
+#### Cookie設計
+- Cookie名: `current_organization_id`
+- ドメイン: `.local.test`（サブドメイン間で共有）
+- HTTPOnly: true（セキュリティ）
+- SameSite: lax
+
+#### IP制限（OPSドメイン）
+- 環境変数: `OPS_ALLOWED_IPS=192.168.1.100,10.0.0.50`
+- ミドルウェアで判定（`src/middleware.ts`）
+- 未設定時は制限なし（開発環境用）
+
+#### 権限の階層
+- **OPS**: システム全体の管理（組織に所属しない）
+- **owner**: 組織のすべての管理（サブスクリプション含む）
+- **admin**: 組織管理（サブスクリプション除く）
+- **member**: 一般機能のみ（管理機能なし）
+
+### 🎯 次のステップ
+
+1. Phase 1 MVP機能の実装開始
+2. 各仕様書に基づいてテストファイル（`.spec.ts`）を作成
+3. テスト実行 → 実装 → テスト成功のサイクル
+
+### 🔗 関連リンク
+
+- E2Eテスト仕様書: `docs/specifications/E2E_TEST_*.md`
+- 実装済みテスト: `e2e/auth.spec.ts`
+- テストアカウント情報: `e2e/TEST_ACCOUNTS.md`
+- マルチドメイン設定: `docs/specifications/MULTI_DOMAIN_SETUP.md`
+
+---
+
 ## テンプレート（次回の実装記録用）
 
 ```markdown
