@@ -2,6 +2,10 @@
 import { test, expect } from '@playwright/test'
 import { DOMAINS, loginAsMember } from './helpers'
 
+// 同じユーザーで複数のテストを実行するため、シリアルモードで実行
+// (Supabaseのセッション競合を回避)
+test.describe.configure({ mode: 'serial' })
+
 test.describe('APPドメイン - 一般ユーザー向けダッシュボード', () => {
   test.describe('1. ダッシュボード表示', () => {
     test('1-1. member権限ユーザーのダッシュボードアクセス', async ({ page }) => {
@@ -102,8 +106,14 @@ test.describe('APPドメイン - 一般ユーザー向けダッシュボード',
         timeout: 5000,
       })
 
-      // 新しいパスワードでログインできることを確認
-      // （注: テスト後に元に戻す必要があるため、このテストはスキップ可能）
+      // テスト後、パスワードを元に戻す（後続のテストのため）
+      await page.waitForTimeout(2000) // フォームが再び編集可能になるまで待つ
+      await page.fill('input[name="newPassword"]', 'test1234')
+      await page.fill('input[name="confirmPassword"]', 'test1234')
+      await page.click('button:has-text("パスワードを変更")')
+      await expect(page.locator('text=パスワードを変更しました')).toBeVisible({
+        timeout: 5000,
+      })
     })
 
     test('2-4. パスワード変更エラー（パスワード不一致）', async ({ page }) => {

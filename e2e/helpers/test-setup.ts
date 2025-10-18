@@ -157,7 +157,7 @@ export async function createTestUser(
       .from('profiles')
       .update({
         company_name: options?.companyName || 'Test Company',
-        name: options?.contactName || 'Test User',
+        full_name: options?.contactName || 'Test User',
       })
       .eq('id', data.user.id)
 
