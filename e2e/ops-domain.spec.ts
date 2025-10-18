@@ -2,14 +2,15 @@
 import { test, expect } from '@playwright/test'
 import { DOMAINS, loginAsOps } from './helpers'
 
-test.describe('OPSドメイン - 運用ダッシュボード', () => {
-  test.beforeEach(async ({ page }) => {
-    // OPS権限を持つユーザーとしてログイン
-    await loginAsOps(page)
-  })
+// 同じユーザーで複数のテストを実行するため、シリアルモードで実行
+// (Supabaseのセッション競合を回避)
+test.describe.configure({ mode: 'serial' })
 
+test.describe('OPSドメイン - 運用ダッシュボード', () => {
   test.describe('ダッシュボード表示', () => {
     test('運用ダッシュボードが正しく表示される', async ({ page }) => {
+      // OPS権限を持つユーザーとしてログイン
+      await loginAsOps(page)
       await page.goto(DOMAINS.OPS)
 
       // ダッシュボードタイトルが表示される
@@ -23,6 +24,9 @@ test.describe('OPSドメイン - 運用ダッシュボード', () => {
     })
 
     test('ダークテーマが適用されている', async ({ page }) => {
+      // OPS権限を持つユーザーとしてログイン
+      await loginAsOps(page)
+
       await page.goto(DOMAINS.OPS)
 
       // ダークテーマ（黒・赤系）が適用されている
@@ -38,6 +42,9 @@ test.describe('OPSドメイン - 運用ダッシュボード', () => {
 
   test.describe('組織管理機能', () => {
     test('組織一覧が表示される', async ({ page }) => {
+      // OPS権限を持つユーザーとしてログイン
+      await loginAsOps(page)
+
       await page.goto(DOMAINS.OPS)
 
       // 組織一覧セクションが表示される
@@ -54,6 +61,9 @@ test.describe('OPSドメイン - 運用ダッシュボード', () => {
     })
 
     test('「すべて表示」リンクが動作する', async ({ page }) => {
+      // OPS権限を持つユーザーとしてログイン
+      await loginAsOps(page)
+
       await page.goto(DOMAINS.OPS)
 
       // すべて表示リンクをクリック
@@ -66,6 +76,9 @@ test.describe('OPSドメイン - 運用ダッシュボード', () => {
 
   test.describe('ユーザー管理機能', () => {
     test('ユーザー一覧が表示される', async ({ page }) => {
+      // OPS権限を持つユーザーとしてログイン
+      await loginAsOps(page)
+
       await page.goto(DOMAINS.OPS)
 
       // ユーザー一覧セクションが表示される
@@ -83,6 +96,9 @@ test.describe('OPSドメイン - 運用ダッシュボード', () => {
     test('ユーザー一覧の「すべて表示」リンクが動作する', async ({
       page,
     }) => {
+      // OPS権限を持つユーザーとしてログイン
+      await loginAsOps(page)
+
       await page.goto(DOMAINS.OPS)
 
       // ユーザー一覧のすべて表示リンクをクリック
@@ -96,6 +112,9 @@ test.describe('OPSドメイン - 運用ダッシュボード', () => {
 
   test.describe('監査ログ機能', () => {
     test('監査ログ一覧が表示される', async ({ page }) => {
+      // OPS権限を持つユーザーとしてログイン
+      await loginAsOps(page)
+
       await page.goto(DOMAINS.OPS)
 
       // 監査ログセクションが表示される
@@ -110,6 +129,9 @@ test.describe('OPSドメイン - 運用ダッシュボード', () => {
     })
 
     test('監査ログの「すべて表示」リンクが動作する', async ({ page }) => {
+      // OPS権限を持つユーザーとしてログイン
+      await loginAsOps(page)
+
       await page.goto(DOMAINS.OPS)
 
       // 監査ログのすべて表示リンクをクリック
@@ -123,6 +145,9 @@ test.describe('OPSドメイン - 運用ダッシュボード', () => {
 
   test.describe('システム統計', () => {
     test('システム統計が正しく表示される', async ({ page }) => {
+      // OPS権限を持つユーザーとしてログイン
+      await loginAsOps(page)
+
       await page.goto(DOMAINS.OPS)
 
       // 統計カードが4つ表示される
@@ -134,6 +159,9 @@ test.describe('OPSドメイン - 運用ダッシュボード', () => {
     })
 
     test('統計値が数値で表示される', async ({ page }) => {
+      // OPS権限を持つユーザーとしてログイン
+      await loginAsOps(page)
+
       await page.goto(DOMAINS.OPS)
 
       // 各統計の値が数値であることを確認
@@ -148,6 +176,9 @@ test.describe('OPSドメイン - 運用ダッシュボード', () => {
 
   test.describe('ナビゲーション', () => {
     test('ヘッダーに運用メニューが表示される', async ({ page }) => {
+      // OPS権限を持つユーザーとしてログイン
+      await loginAsOps(page)
+
       await page.goto(DOMAINS.OPS)
 
       // 運用メニューが表示される（ダッシュボード、組織、ユーザーなど）
@@ -155,6 +186,9 @@ test.describe('OPSドメイン - 運用ダッシュボード', () => {
     })
 
     test('ユーザーメニューが表示される', async ({ page }) => {
+      // OPS権限を持つユーザーとしてログイン
+      await loginAsOps(page)
+
       await page.goto(DOMAINS.OPS)
 
       // ユーザーメニューボタンが表示される

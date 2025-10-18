@@ -26,6 +26,13 @@ export default async function AppPage({ searchParams }: AppPageProps) {
     redirect(`${env.NEXT_PUBLIC_WWW_URL}/login`)
   }
 
+  // プロフィール情報を取得
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', user.id)
+    .single()
+
   // ユーザーが所属する組織を取得
   const { data: memberships } = await supabase
     .from('organization_members')
@@ -41,6 +48,7 @@ export default async function AppPage({ searchParams }: AppPageProps) {
     `
     )
     .eq('user_id', user.id)
+    .is('deleted_at', null)
 
   console.log('[APP Page] Memberships:', memberships?.length || 0)
 
@@ -91,12 +99,14 @@ export default async function AppPage({ searchParams }: AppPageProps) {
             <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent">
               ダッシュボード
             </h1>
-            <p className="text-gray-700 mt-2 text-lg">{currentOrg.name}</p>
+            <p className="text-gray-700 mt-2 text-lg">
+              こんにちは、{profile?.full_name || user.email?.split('@')[0]}さん
+            </p>
           </div>
           <div className="hidden md:flex items-center gap-4">
             <div className="text-right">
-              <div className="text-sm text-gray-600">ようこそ</div>
-              <div className="text-lg font-semibold text-gray-900">{user.email}</div>
+              <div className="text-sm text-gray-600">現在の組織</div>
+              <div className="text-lg font-semibold text-gray-900">{currentOrg.name}</div>
             </div>
           </div>
         </div>

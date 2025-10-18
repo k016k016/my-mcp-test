@@ -1619,6 +1619,230 @@ E2Eテストの仕様が不明確で、以下の問題がありました：
 
 ---
 
+## 2025-10-18: 組織情報閲覧ページの実装とE2Eテストの環境変数対応
+
+### 📌 実装の背景
+
+E2Eテスト仕様書の作成後、Phase 1 MVP機能の中から「軽い（実装が簡単）」機能として組織情報閲覧ページを実装しました。また、E2Eテストが`.local.test`ドメインではなく`localhost`を使用しており、Vercel Preview環境でも動作するように環境変数対応が必要でした。
+
+**問題点**:
+1. APPドメインに組織情報を閲覧するページが存在しない（仕様書には記載済み）
+2. E2Eテストファイルがドメインをハードコード（`localhost:3000`）
+3. Vercel Preview環境でテストが動作しない（ドメインが異なる）
+
+### 🎯 実装内容
+
+#### 1. 組織情報閲覧ページの実装（APPドメイン）
+
+**新規ページ**: `src/app/app/organization/page.tsx`
+
+**機能**:
+- 現在の組織の基本情報を表示（組織名、組織ID、メンバー数、プラン、作成日）
+- ユーザーの権限を表示（オーナー/管理者/ユーザー）
+- 権限に応じたUI切り替え:
+  - **member権限**: 読み取り専用、編集不可のメッセージを表示
+  - **owner/admin権限**: 「管理画面で編集」ボタンを表示（ADMIN URLにリンク）
+
+```typescript
+export default async function OrganizationInfoPage() {
+  const supabase = await createClient()
+
+  // 認証チェック
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    redirect(`${env.NEXT_PUBLIC_WWW_URL}/login`)
+  }
+
+  // 現在の組織IDを取得
+  const organizationId = await getCurrentOrganizationId()
+
+  // 組織情報を取得
+  const { data: organization } = await supabase
+    .from('organizations')
+    .select('*')
+    .eq('id', organizationId)
+    .single()
+
+  // メンバー数を取得
+  const { count: membersCount } = await supabase
+    .from('organization_members')
+    .select('*', { count: 'exact', head: true })
+    .eq('organization_id', organizationId)
+    .is('deleted_at', null)
+
+  // ユーザーの権限を取得
+  const { data: membership } = await supabase
+    .from('organization_members')
+    .select('role')
+    .eq('user_id', user.id)
+    .eq('organization_id', organizationId)
+    .is('deleted_at', null)
+    .single()
+
+  const role = membership?.role || 'member'
+  const isAdmin = role === 'owner' || role === 'admin'
+
+  // UI表示: 組織情報、権限、管理画面リンク（権限がある場合）
+}
+```
+
+**UIの特徴**:
+- 白背景とグラデーション、視認性の高い配色
+- member権限の場合: 青色の注意メッセージを表示
+- admin権限の場合: 「管理画面で編集」ボタンを各セクションに配置
+- オーナーバッジに王冠アイコン（👑）を表示
+
+**ナビゲーション追加**: `src/app/app/layout.tsx`
+
+```typescript
+// ナビゲーションに「組織情報」リンクを追加（プロフィール設定と管理画面の間）
+<a
+  href="/organization"
+  className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+>
+  組織情報
+</a>
+```
+
+#### 2. E2Eテストヘルパーの環境変数対応
+
+**ファイル**: `e2e/helpers.ts`
+
+**変更内容**:
+
+1. **ドメイン定義を環境変数で取得**:
+```typescript
+// 変更前
+export const DOMAINS = {
+  WWW: 'http://www.local.test:3000',
+  APP: 'http://app.local.test:3000',
+  ADMIN: 'http://admin.local.test:3000',
+  OPS: 'http://ops.local.test:3000',
+} as const
+
+// 変更後
+export const DOMAINS = {
+  WWW: process.env.NEXT_PUBLIC_WWW_URL || 'http://www.local.test:3000',
+  APP: process.env.NEXT_PUBLIC_APP_URL || 'http://app.local.test:3000',
+  ADMIN: process.env.NEXT_PUBLIC_ADMIN_URL || 'http://admin.local.test:3000',
+  OPS: process.env.NEXT_PUBLIC_OPS_URL || 'http://ops.local.test:3000',
+} as const
+```
+
+2. **URL待機パターンの修正**:
+```typescript
+// 変更前
+await page.waitForURL(/localhost:3000/, { timeout: 10000 })
+
+// 変更後
+await page.waitForURL(/local\.test:3000/, { timeout: 10000 })
+```
+
+3. **ログアウト後のリダイレクト確認を修正**:
+```typescript
+// 変更前
+await page.waitForURL(/^http:\/\/localhost:3000/)
+
+// 変更後
+await page.waitForURL(/^http:\/\/www\.local\.test:3000/)
+```
+
+**効果**:
+- ローカル環境: `.env.local`の値を使用（`.local.test`ドメイン）
+- Vercel Preview環境: 環境変数から動的にドメインを取得
+- フォールバック: 環境変数が未設定の場合は`.local.test`を使用
+
+#### 3. E2Eテストファイルのドメイン修正
+
+**ファイル**:
+- `e2e/admin-domain.spec.ts`
+- `e2e/organization-switching.spec.ts`
+
+**変更内容**: すべての`localhost`を`local.test`に置換
+
+```typescript
+// admin-domain.spec.ts（2箇所）
+await expect(page).toHaveURL(/admin\.local\.test:3000/)  // 変更前: admin\.localhost:3000
+
+// organization-switching.spec.ts（5箇所）
+await expect(page).toHaveURL(/admin\.local\.test:3000/, { timeout: 5000 })
+await expect(page).toHaveURL(/app\.local\.test:3000/, { timeout: 5000 })
+```
+
+#### 4. E2Eテストの実行と検証
+
+**実行コマンド**: `npm run test:e2e -- auth.spec.ts`
+
+**結果**: ✅ **15/15 テスト成功**（3ブラウザ × 5テスト）
+
+```
+Running 15 tests using 3 workers
+  15 passed (16.8s)
+```
+
+**テスト内訳**:
+- サインアップフロー → プラン選択ページ到達
+- owner権限ログイン → ADMINドメインリダイレクト
+- member権限ログイン → APPドメインリダイレクト
+- 不正な認証情報 → エラーメッセージ表示
+- ログアウト → WWWドメインリダイレクト
+
+### 📁 変更ファイル一覧
+
+| ファイル | 変更内容 | タイプ |
+|---------|---------|--------|
+| `src/app/app/organization/page.tsx` | 組織情報閲覧ページ | 新規 |
+| `src/app/app/layout.tsx` | ナビゲーションに「組織情報」リンク追加 | 変更 |
+| `e2e/helpers.ts` | DOMAINS定義を環境変数で取得、URL待機パターンを修正 | 変更 |
+| `e2e/admin-domain.spec.ts` | ドメインを`localhost`→`local.test`に修正 | 変更 |
+| `e2e/organization-switching.spec.ts` | ドメインを`localhost`→`local.test`に修正 | 変更 |
+
+### ✅ テスト項目
+
+- [x] 組織情報閲覧ページが表示される（組織名、ID、メンバー数、プラン、作成日）
+- [x] member権限の場合、編集不可のメッセージが表示される
+- [x] owner/admin権限の場合、「管理画面で編集」ボタンが表示される
+- [x] ナビゲーションに「組織情報」リンクが追加されている
+- [x] E2Eテストヘルパーが環境変数からドメインを取得できる
+- [x] E2Eテストが`.local.test`ドメインで正しく動作する
+- [x] `auth.spec.ts`の全15テストが成功する
+
+### 🔄 実装フロー
+
+```
+1. E2Eテスト仕様書の作成
+   ↓
+2. Phase 1 MVP機能の選定（組織情報閲覧）
+   ↓
+3. 組織情報閲覧ページの実装（src/app/app/organization/page.tsx）
+   ↓
+4. ナビゲーションリンクの追加（src/app/app/layout.tsx）
+   ↓
+5. E2Eテストヘルパーの環境変数対応（e2e/helpers.ts）
+   ↓
+6. E2Eテストファイルのドメイン修正（admin-domain.spec.ts, organization-switching.spec.ts）
+   ↓
+7. E2Eテスト実行と検証（auth.spec.ts: 15/15成功）
+```
+
+### 🎨 UIの特徴
+
+- **配色**: 白背景、グラデーション、視認性の高い文字色
+- **レイアウト**: 3つのセクション（基本情報、あなたの権限）
+- **権限別UI**:
+  - member権限: 青色の注意メッセージ
+  - owner/admin権限: 「管理画面で編集」ボタン
+- **バッジ**: オーナーに王冠アイコン（👑）
+
+### 🔗 関連リンク
+
+- E2Eテスト仕様書: `docs/specifications/E2E_TEST_APP_DOMAIN.md`
+- 組織情報閲覧ページ: `src/app/app/organization/page.tsx:1`
+- E2Eテストヘルパー: `e2e/helpers.ts:42`
+- 実装済みテスト: `e2e/auth.spec.ts`
+
+---
+
 ## テンプレート（次回の実装記録用）
 
 ```markdown

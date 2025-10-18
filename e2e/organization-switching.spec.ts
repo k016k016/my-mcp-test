@@ -2,6 +2,10 @@
 import { test, expect } from '@playwright/test'
 import { DOMAINS, loginAsAdmin, loginAsMember } from './helpers'
 
+// 同じユーザーで複数のテストを実行するため、シリアルモードで実行
+// (Supabaseのセッション競合を回避)
+test.describe.configure({ mode: 'serial' })
+
 test.describe('組織切り替え - AUTH_FLOW_SPECIFICATION準拠', () => {
   test.describe('権限に基づくドメインリダイレクト', () => {
     test('組織A (ADMIN権限) → admin.xxx.com にリダイレクト', async ({
