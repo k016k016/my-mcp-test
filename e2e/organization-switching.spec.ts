@@ -1,6 +1,6 @@
 // 組織切り替えE2Eテスト - AUTH_FLOW_SPECIFICATION.md セクション4準拠
 import { test, expect } from '@playwright/test'
-import { DOMAINS, loginAsMultiOrg } from './helpers'
+import { DOMAINS, loginAsMultiOrg, loginAsAdmin, loginAsMember } from './helpers'
 
 // 同じユーザーで複数のテストを実行するため、シリアルモードで実行
 // (Supabaseのセッション競合を回避)
