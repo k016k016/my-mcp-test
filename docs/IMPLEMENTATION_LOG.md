@@ -4,6 +4,217 @@
 
 ---
 
+## 2025-10-24: APP domainのE2Eテストにベストプラクティスパターンを適用
+
+### 📌 実装の背景
+
+組織切り替えE2Eテストで学んだベストプラクティスパターンを、APP domainのプロフィール更新・パスワード変更のE2Eテストにも適用し、テストの堅牢性を向上させる。
+
+主な問題点：
+- `waitForTimeout(2000)`による不安定な待機処理
+- ローディングインジケーターのライフサイクル検証が未実装
+- E2E遅延フラグのサポートが未実装
+
+### 🎯 実装内容
+
+#### 1. プロフィールページへのローディングインジケーター追加
+
+**ファイル**: `src/app/app/settings/profile/page.tsx`
+
+**変更点**:
+```typescript
+// プロフィール保存ボタン
+<div className="pt-4 relative">
+  {saving && (
+    <div
+      className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 rounded-lg z-10"
+      data-testid="profile-save-loading"
+    >
+      <svg className="animate-spin h-5 w-5 text-blue-600" ...>
+    </div>
+  )}
+  <button type="submit" disabled={saving}>
+    {saving ? '保存中...' : '保存'}
+  </button>
+</div>
+
+// パスワード変更ボタン
+<div className="pt-4 relative">
+  {changingPassword && (
+    <div
+      className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 rounded-lg z-10"
+      data-testid="password-change-loading"
+    >
+      <svg className="animate-spin h-5 w-5 text-purple-600" ...>
+    </div>
+  )}
+  <button type="submit" disabled={changingPassword}>
+    {changingPassword ? '変更中...' : 'パスワードを変更'}
+  </button>
+</div>
+```
+
+**追加したdata-testid**:
+- `profile-save-loading`: プロフィール保存時のローディング表示
+- `password-change-loading`: パスワード変更時のローディング表示
+
+#### 2. E2E遅延フラグのサポート追加
+
+**ファイル**: `src/app/app/settings/profile/page.tsx`
+
+**変更点**:
+```typescript
+async function handleSubmit(e: React.FormEvent) {
+  e.preventDefault()
+  setMessage(null)
+
+  // E2E環境での人工遅延（テスト用）
+  let e2eDelayMs = 0
+  if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+    const cookieMatch = document.cookie.match(/__E2E_FORCE_PENDING_MS__=(\d+)/)
+    if (cookieMatch) {
+      e2eDelayMs = Number(cookieMatch[1])
+      setSaving(true) // ローディング状態ON（処理開始前）
+      await new Promise((r) => setTimeout(r, e2eDelayMs))
+      // Cookie削除（1回使い切り）
+      document.cookie =
+        '__E2E_FORCE_PENDING_MS__=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.local.test'
+    }
+  }
+
+  if (!saving) setSaving(true)
+
+  // ... Supabase処理 ...
+
+  // 最小表示時間300msを保証
+  if (e2eDelayMs > 0) {
+    await new Promise((r) => setTimeout(r, 300))
+  }
+
+  // ... 結果処理 ...
+  setSaving(false)
+}
+
+// handlePasswordChange も同様のパターン
+```
+
+**動作**:
+- OrganizationSwitcherと同じパターンを適用
+- E2E遅延フラグ検出時、ローディング状態を**処理開始前**にON
+- Cookieは1回使い切り（自動削除）
+- 最小表示時間300msを保証してフラッシュを防止
+
+#### 3. E2Eテストの改善
+
+**ファイル**: `e2e/app-domain.spec.ts`
+
+**変更点1: waitForTimeoutをUI変化待ちパターンに置き換え**
+
+```typescript
+// Before
+await expect(page.locator('text=プロフィールを更新しました')).toBeVisible({
+  timeout: 10000,
+})
+await page.waitForTimeout(2000) // 不安定な固定待機
+await page.locator('input[name="fullName"]').fill(originalName || 'Member User')
+
+// After
+await expect(page.locator('text=プロフィールを更新しました')).toBeVisible({
+  timeout: 10000,
+})
+// 成功メッセージが消えるまで待つ（UI変化待ちパターン）
+await expect(page.locator('text=プロフィールを更新しました')).toBeHidden({
+  timeout: 10000,
+})
+await page.locator('input[name="fullName"]').fill(originalName || 'Member User')
+```
+
+**改善効果**:
+- 固定時間待機を排除し、実際のUI変化を待つ
+- より堅牢で予測可能なテストに改善
+- パスワード変更テストにも同様のパターンを適用
+
+**変更点2: ローディングインジケーターのライフサイクルテスト追加**
+
+```typescript
+test('2-5. プロフィール保存時のローディング表示', async ({ page }) => {
+  await page.goto(`${DOMAINS.APP}/settings/profile`, { waitUntil: 'networkidle' })
+
+  // E2E遅延フラグをセット（300ms）
+  await setE2EFlag(page, 300)
+
+  // 名前フィールドを変更
+  await page.fill('input[name="fullName"]', 'Test Loading Indicator')
+
+  const loader = page.getByTestId('profile-save-loading')
+
+  // 保存ボタンクリックと並行してローディングインジケーターのライフサイクルを検証
+  await Promise.all([
+    (async () => {
+      await expect(loader).toBeAttached({ timeout: 2000 })
+      await expect(loader).toBeVisible({ timeout: 2000 })
+      await expect(loader).toBeHidden({ timeout: 10000 })
+    })(),
+    page.click('button[type="submit"]:has-text("保存")'),
+  ])
+
+  // 成功メッセージが表示されることを確認
+  await expect(page.locator('text=プロフィールを更新しました')).toBeVisible({
+    timeout: 5000,
+  })
+})
+
+test('2-6. パスワード変更時のローディング表示', async ({ page }) => {
+  // 同様のパターンでパスワード変更のローディングを検証
+  // ...
+})
+```
+
+**追加したテストケース**:
+- `2-5. プロフィール保存時のローディング表示`
+- `2-6. パスワード変更時のローディング表示`
+
+**検証内容**:
+- ローディングインジケーターが`toBeAttached` → `toBeVisible` → `toBeHidden`のライフサイクルを正しく辿ることを確認
+- 並列検証パターン (`Promise.all`) を使用
+- E2E遅延フラグで300msの人工遅延を追加
+
+### 📝 適用したベストプラクティス
+
+`docs/E2E_BEST_PRACTICES.md`に記載されているパターンを適用：
+
+1. **Cookie-based E2E delay control**
+   - `__E2E_FORCE_PENDING_MS__` Cookieで遅延時間を制御
+   - Domain=`.local.test`で全サブドメインで有効
+
+2. **UI変化待ちパターン**
+   - `waitForTimeout`を`toBeHidden`に置き換え
+   - 実際のUI変化を待つことで堅牢性向上
+
+3. **並列検証パターン**
+   - `Promise.all`でクリックとローディング検証を並行実行
+   - ライフサイクル全体を確実に検証
+
+4. **最小表示時間保証**
+   - 300msの最小表示時間でフラッシュ防止
+   - UX向上とテスト安定性の両立
+
+### ✅ 結果
+
+**変更ファイル**:
+- `src/app/app/settings/profile/page.tsx`: ローディングインジケーター追加、E2E遅延フラグサポート
+- `e2e/app-domain.spec.ts`: UI変化待ちパターン適用、ローディングテスト追加
+
+**テスト追加**:
+- 新規テストケース: 2件
+- 既存テスト改善: 2件
+
+**次のステップ**:
+- E2Eテストのエラー修正（実行時にエラーが発生）
+- 他のフォーム送信処理にも同様のパターンを適用
+
+---
+
 ## 2025-10-23: E2Eテストの高速化と安定化
 
 ### 📌 実装の背景
