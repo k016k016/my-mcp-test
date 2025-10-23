@@ -82,7 +82,7 @@ export async function getUserPermissionLevel(user: User): Promise<{
   const isOps = await isOpsUser(user)
   
   // 組織メンバーシップ取得
-  const { data: memberships } = await supabase
+  const { data: memberships, error: membershipError } = await supabase
     .from('organization_members')
     .select(`
       role,
@@ -93,24 +93,25 @@ export async function getUserPermissionLevel(user: User): Promise<{
     `)
     .eq('user_id', user.id)
     .is('deleted_at', null)
-  
-  console.log('[getUserPermissionLevel] User ID:', user.id)
-  console.log('[getUserPermissionLevel] Memberships:', memberships)
-  
+
+  console.error('[getUserPermissionLevel] User ID:', user.id)
+  console.error('[getUserPermissionLevel] Membership query error:', membershipError)
+  console.error('[getUserPermissionLevel] Memberships:', memberships)
+
   const organizations = (memberships || []).map((m: any) => ({
     id: m.organization.id,
     name: m.organization.name,
     role: m.role
   }))
-  
-  console.log('[getUserPermissionLevel] Organizations:', organizations)
-  
+
+  console.error('[getUserPermissionLevel] Organizations:', organizations)
+
   // 管理者権限チェック（任意の組織でadmin/owner）
-  const isAdmin = organizations.some(org => 
+  const isAdmin = organizations.some(org =>
     org.role === 'owner' || org.role === 'admin'
   )
-  
-  console.log('[getUserPermissionLevel] isAdmin:', isAdmin)
+
+  console.error('[getUserPermissionLevel] isAdmin:', isAdmin)
   
   // メンバー権限チェック
   const isMember = organizations.length > 0
@@ -130,33 +131,33 @@ export async function getUserPermissionLevel(user: User): Promise<{
 export async function getRedirectUrlForUser(user: User): Promise<string> {
   const permissions = await getUserPermissionLevel(user)
 
-  console.log('[getRedirectUrlForUser] User ID:', user.id)
-  console.log('[getRedirectUrlForUser] Permissions:', permissions)
+  console.error('[getRedirectUrlForUser] User ID:', user.id)
+  console.error('[getRedirectUrlForUser] Permissions:', permissions)
 
   // 運用担当者はOPS画面へ
   if (permissions.isOps) {
     const url = process.env.NEXT_PUBLIC_OPS_URL || 'http://ops.localhost:3000'
-    console.log('[getRedirectUrlForUser] Redirecting to OPS:', url)
+    console.error('[getRedirectUrlForUser] Redirecting to OPS:', url)
     return url
   }
 
   // 管理者はADMIN画面へ
   if (permissions.isAdmin) {
     const url = process.env.NEXT_PUBLIC_ADMIN_URL || 'http://admin.localhost:3000'
-    console.log('[getRedirectUrlForUser] Redirecting to ADMIN:', url)
+    console.error('[getRedirectUrlForUser] Redirecting to ADMIN:', url)
     return url
   }
 
   // 一般メンバーはAPP画面へ
   if (permissions.isMember) {
     const url = process.env.NEXT_PUBLIC_APP_URL || 'http://app.localhost:3000'
-    console.log('[getRedirectUrlForUser] Redirecting to APP:', url)
+    console.error('[getRedirectUrlForUser] Redirecting to APP:', url)
     return url
   }
 
   // 想定外（原則発生しない）: 仕様上、組織未所属ユーザーは存在しない
   // フォールバックとしてWWWトップへ
   const url = process.env.NEXT_PUBLIC_WWW_URL || 'http://localhost:3000'
-  console.log('[getRedirectUrlForUser] Redirecting to WWW (fallback):', url)
+  console.error('[getRedirectUrlForUser] Redirecting to WWW (fallback):', url)
   return url
 }

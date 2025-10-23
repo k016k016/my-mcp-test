@@ -26,7 +26,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     redirect(`${wwwUrl}/login`)
   }
 
-  // ユーザーが所属する組織を取得
+  // ユーザーが所属する組織を取得（role付き）
   const { data: memberships } = await supabase
     .from('organization_members')
     .select(
@@ -41,14 +41,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .eq('user_id', user.id)
     .is('deleted_at', null)
 
-  const organizations = (memberships || []).map((m: any) => m.organization)
+  // organizationsをrole付きのフラット配列に変換
+  const organizationsWithRole = (memberships || []).map((m: any) => ({
+    id: m.organization.id,
+    name: m.organization.name,
+    role: m.role,
+  }))
 
   // 現在の組織IDを取得
   let currentOrgId = await getCurrentOrganizationId()
 
   // 現在の組織が設定されていない、または無効な場合は最初の組織を使用
-  if (!currentOrgId || !organizations.find((org: any) => org.id === currentOrgId)) {
-    currentOrgId = organizations[0]?.id || null
+  if (!currentOrgId || !organizationsWithRole.find((org: any) => org.id === currentOrgId)) {
+    currentOrgId = organizationsWithRole[0]?.id || null
     // Cookieの設定はServer Actionで行う必要があるため、ここでは設定しない
   }
 
@@ -119,11 +124,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </div>
 
             <div className="flex items-center gap-4">
-              {/* 組織切り替え */}
-              {organizations.length > 0 && currentOrgId && (
+              {/* 組織切り替え（複数組織に所属している場合のみ表示） */}
+              {organizationsWithRole.length > 1 && currentOrgId && (
                 <div className="hidden sm:block">
                   <OrganizationSwitcher
-                    organizations={organizations}
+                    organizations={organizationsWithRole}
                     currentOrganizationId={currentOrgId}
                     data-testid="organization-switcher"
                   />

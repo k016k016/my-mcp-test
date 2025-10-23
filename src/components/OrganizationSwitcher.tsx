@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation'
 interface Organization {
   id: string
   name: string
-  slug: string
+  role: 'owner' | 'admin' | 'member'
 }
 
 interface OrganizationSwitcherProps {
@@ -48,6 +48,19 @@ export default function OrganizationSwitcher({
 
   return (
     <div className="relative" data-testid={testId}>
+      {/* ローディングインジケーター */}
+      {isPending && (
+        <div
+          className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 rounded-md z-30"
+          data-testid="loading-indicator"
+        >
+          <svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        </div>
+      )}
+
       {/* 現在の組織表示ボタン */}
       <button
         onClick={() => setIsOpen(!isOpen)}
@@ -58,7 +71,7 @@ export default function OrganizationSwitcher({
           <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-white text-xs font-bold">
             {currentOrg?.name.charAt(0).toUpperCase()}
           </div>
-          <span>{currentOrg?.name}</span>
+          <span data-testid="current-organization-name">{currentOrg?.name}</span>
         </div>
         <svg
           className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
@@ -77,19 +90,23 @@ export default function OrganizationSwitcher({
           <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
 
           {/* メニュー本体 */}
-          <div className="absolute right-0 z-20 w-64 mt-2 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5">
+          <div
+            className="absolute right-0 z-20 w-64 mt-2 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5"
+            data-testid="organization-menu"
+          >
             <div className="py-1">
               {/* 組織一覧 */}
               <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase">
                 組織を切り替え
               </div>
-              {organizations.map((org) => (
+              {organizations.map((org, index) => (
                 <button
                   key={org.id}
                   onClick={() => handleSwitch(org.id)}
                   className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2 ${
                     org.id === currentOrganizationId ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
                   }`}
+                  data-testid={org.id === currentOrganizationId ? 'org-option-active' : `org-option-${org.id}`}
                 >
                   <div
                     className={`w-6 h-6 rounded flex items-center justify-center text-white text-xs font-bold ${
@@ -100,7 +117,20 @@ export default function OrganizationSwitcher({
                   </div>
                   <div className="flex-1">
                     <div className="font-medium">{org.name}</div>
-                    <div className="text-xs text-gray-500">{org.slug}</div>
+                    <div className="text-xs text-gray-500">
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                          org.role === 'owner'
+                            ? 'bg-purple-100 text-purple-800'
+                            : org.role === 'admin'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}
+                        data-testid="role-badge"
+                      >
+                        {org.role === 'owner' ? '👑 オーナー' : org.role === 'admin' ? '管理者' : 'メンバー'}
+                      </span>
+                    </div>
                   </div>
                   {org.id === currentOrganizationId && (
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">

@@ -38,10 +38,7 @@ Next.js 15 + TypeScript + Supabaseで構築された、本番環境で使用で�
 
 ```
 my-mcp-test/
-├── docs/                           # ドキュメント
-│   ├── PROJECT_PROGRESS.md         # 進捗状況
-│   ├── DATABASE_SCHEMA.md          # データベース設計
-│   └── ...
+├── docs/                           # ドキュメント（構成は docs/README.md を参照）
 ├── src/
 │   ├── app/
 │   │   ├── (www)/                  # マーケティングサイト

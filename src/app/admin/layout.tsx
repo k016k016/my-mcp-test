@@ -32,7 +32,7 @@ export default async function AdminLayout({
     redirect(to.toString())
   }
 
-  // ユーザーが所属する組織を取得
+  // ユーザーが所属する組織を取得（role付き）
   const { data: memberships } = await supabase
     .from('organization_members')
     .select(
@@ -47,16 +47,21 @@ export default async function AdminLayout({
     .eq('user_id', user.id)
     .is('deleted_at', null)
 
-  const organizations = (memberships || []).map((m: any) => m.organization)
+  // organizationsをrole付きのフラット配列に変換
+  const organizationsWithRole = (memberships || []).map((m: any) => ({
+    id: m.organization.id,
+    name: m.organization.name,
+    role: m.role,
+  }))
 
   // 現在の組織IDを取得
   let currentOrgId = await getCurrentOrganizationId()
   console.log('[ADMIN Layout] Raw currentOrgId from cookie:', currentOrgId)
 
   // 現在の組織が設定されていない、または無効な場合は最初の組織を使用
-  if (!currentOrgId || !organizations.find((org: any) => org.id === currentOrgId)) {
-    console.log('[ADMIN Layout] Setting currentOrgId to first organization:', organizations[0]?.id)
-    currentOrgId = organizations[0]?.id || null
+  if (!currentOrgId || !organizationsWithRole.find((org: any) => org.id === currentOrgId)) {
+    console.log('[ADMIN Layout] Setting currentOrgId to first organization:', organizationsWithRole[0]?.id)
+    currentOrgId = organizationsWithRole[0]?.id || null
   }
 
   // 管理者権限チェック
@@ -107,12 +112,13 @@ export default async function AdminLayout({
               <span className="text-xl font-bold">Admin Panel</span>
             </div>
 
-            {/* 組織切り替え */}
-            {organizations.length > 0 && currentOrgId && (
+            {/* 組織切り替え（複数組織に所属している場合のみ表示） */}
+            {organizationsWithRole.length > 1 && currentOrgId && (
               <div className="mb-6">
                 <OrganizationSwitcher
-                  organizations={organizations}
+                  organizations={organizationsWithRole}
                   currentOrganizationId={currentOrgId}
+                  data-testid="organization-switcher"
                 />
               </div>
             )}
@@ -191,7 +197,7 @@ export default async function AdminLayout({
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">管理画面</h1>
                 <p className="text-sm text-gray-600 mt-1">
-                  {organizations.find((org: any) => org.id === currentOrgId)?.name || '組織を選択してください'}
+                  {organizationsWithRole.find((org: any) => org.id === currentOrgId)?.name || '組織を選択してください'}
                 </p>
               </div>
               

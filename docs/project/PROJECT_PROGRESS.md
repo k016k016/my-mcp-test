@@ -72,7 +72,7 @@ supabase/
 └── scripts/           # データ管理スクリプト
 
 e2e/                   # E2Eテスト
-docs/                  # ドキュメント
+docs/                  # ドキュメント（構成は docs/README.md を参照）
 ```
 
 ## 🔧 セットアップ
