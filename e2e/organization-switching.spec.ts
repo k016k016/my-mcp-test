@@ -230,4 +230,30 @@ test.describe('組織切り替え - AUTH_FLOW_SPECIFICATION準拠', () => {
       expect(updatedOrgCookie?.value).not.toBe(initialOrgCookie?.value)
     })
   })
+
+  test.describe('単一組織ユーザー', () => {
+    test('単一組織のユーザーには組織切り替えが表示されない', async ({
+      page,
+    }) => {
+      // owner@example.comでログイン（1つの組織のみ）
+      await page.goto(`${DOMAINS.WWW}/login`, { waitUntil: 'networkidle' })
+
+      await page.fill('input[name="email"]', 'owner@example.com')
+      await page.fill('input[name="password"]', 'test1234')
+
+      const submitButton = page.getByRole('button', {
+        name: 'ログイン',
+        exact: true,
+      })
+      await submitButton.click()
+
+      // ADMINドメインにリダイレクトされるまで待機（owner権限があるため）
+      await page.waitForURL(/admin\.local\.test(:\d+)?/, { timeout: 30000 })
+      await page.waitForLoadState('networkidle')
+
+      // 組織切り替えボタンが表示されない（単一組織のため）
+      const switcher = page.locator('[data-testid="organization-switcher"]')
+      await expect(switcher).not.toBeVisible()
+    })
+  })
 })

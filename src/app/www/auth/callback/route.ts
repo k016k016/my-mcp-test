@@ -1,5 +1,5 @@
 // 認証コールバック（WWWドメイン）
-// OAuth、メール確認などのリダイレクト処理
+// メール確認などのリダイレクト処理
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 

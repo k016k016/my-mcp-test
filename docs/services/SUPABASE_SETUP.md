@@ -125,30 +125,6 @@ export default async function DataPage() {
 
 既に使用可能です。
 
-### OAuth認証（Google、GitHubなど）
-
-1. Supabaseダッシュボードの「Authentication」→「Providers」を選択
-2. 使用したいプロバイダー（例: Google）を選択
-3. プロバイダーの設定ページでClient IDとClient Secretを取得
-4. Supabaseに設定を保存
-5. Redirect URLを設定:
-   - 開発環境: \`http://localhost:3000/auth/callback\`
-   - 本番環境: \`https://your-domain.com/auth/callback\`
-
-### 使用例
-
-\`\`\`typescript
-import { signInWithGoogle } from '@/app/actions/auth'
-
-export default function LoginPage() {
-  return (
-    <form action={signInWithGoogle}>
-      <button type="submit">Googleでログイン</button>
-    </form>
-  )
-}
-\`\`\`
-
 ## 5. PostGISの使用
 
 PostGISの詳細な使用方法については、[POSTGIS_SETUP.md](./POSTGIS_SETUP.md)を参照してください。

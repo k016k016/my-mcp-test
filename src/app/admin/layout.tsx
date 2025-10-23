@@ -81,7 +81,7 @@ export default async function AdminLayout({
     console.log('[ADMIN Layout] Redirecting to APP - no admin permission')
     const appBase = (env.NEXT_PUBLIC_APP_URL || 'http://app.localhost:3000').trim()
     const to = new URL('/', appBase)
-    to.searchParams.set('message', '管理者権限がありません')
+    to.searchParams.set('error', '管理者権限がありません')
     redirect(to.toString())
   }
 

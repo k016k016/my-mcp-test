@@ -41,20 +41,6 @@
    - **Project URL** → `NEXT_PUBLIC_SUPABASE_URL`
    - **anon public** → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
-### Google OAuth設定（オプション）
-
-1. [Google Cloud Console](https://console.cloud.google.com/) にアクセス
-2. 新しいプロジェクトを作成
-3. 「APIとサービス」→「認証情報」→「認証情報を作成」→「OAuthクライアントID」
-4. アプリケーションの種類: **ウェブアプリケーション**
-5. 承認済みのリダイレクトURIを追加:
-   ```
-   https://<your-project-ref>.supabase.co/auth/v1/callback
-   ```
-6. クライアントIDとクライアントシークレットをコピー
-7. Supabaseダッシュボード→「Authentication」→「Providers」→「Google」
-8. 「Enable Google provider」をONにして、クライアントIDとシークレットを入力
-
 ### 環境変数に設定
 
 `.env.development` を編集：
@@ -489,7 +475,6 @@ RESEND_API_KEY=re_abc123def456...
   - [ ] Project URLとAnon Keyを取得
   - [ ] `.env.development` に設定
   - [ ] データベースマイグレーション実行
-  - [ ] Google OAuth設定（オプション）
 
 - [ ] **Cloudflare R2**
   - [ ] アカウント作成とR2有効化

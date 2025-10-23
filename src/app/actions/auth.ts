@@ -222,42 +222,6 @@ export async function signOut() {
 }
 
 /**
- * Googleでログイン
- */
-export async function signInWithGoogle() {
-  try {
-    const supabase = await createClient()
-
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${env.NEXT_PUBLIC_WWW_URL}/auth/callback`,
-      },
-    })
-
-    if (error) {
-      console.error('[signInWithGoogle] Supabase auth error:', error)
-      return { error: 'Googleログインに失敗しました。もう一度お試しください。' }
-    }
-
-    if (data.url) {
-      redirect(data.url)
-    }
-
-    return { error: 'リダイレクトURLが取得できませんでした' }
-  } catch (error) {
-    console.error('[signInWithGoogle] Unexpected error:', error)
-
-    // redirectはthrowするので、それ以外のエラーのみキャッチ
-    if (error && typeof error === 'object' && 'digest' in error) {
-      throw error
-    }
-
-    return { error: '予期しないエラーが発生しました。もう一度お試しください。' }
-  }
-}
-
-/**
  * パスワードリセットメールを送信
  */
 export async function resetPassword(formData: FormData) {

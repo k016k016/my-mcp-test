@@ -84,9 +84,11 @@ export async function loginAs(page: Page, userType: UserType) {
     { timeout: 5000 }
   )
 
-  // submitボタンを待機してからクリック（完全一致で"ログイン"のみを対象）
-  const submitButton = page.getByRole('button', { name: 'ログイン', exact: true })
-  await submitButton.waitFor({ state: 'visible' })
+  // submitボタンを待機してからクリック
+  // WWWドメインは「ログイン」、OPSドメインは「Operations Center にログイン」
+  // 注: 「Googleでログイン」は除外する必要がある
+  const submitButton = page.getByRole('button', { name: /^(Operations Center に)?ログイン$/ })
+  await submitButton.waitFor({ state: 'visible', timeout: 10000 })
 
   // クリック前の現在URLを記録
   const beforeUrl = page.url()
