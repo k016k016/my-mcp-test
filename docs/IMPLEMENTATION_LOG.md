@@ -2146,6 +2146,233 @@ test('組織情報を更新できる', async ({ page }) => {
 
 ---
 
+## 2025-10-23: PlaywrightのstorageStateパターンでFirefox Cookie問題を解決
+
+### 📌 実装の背景
+
+**問題**:
+- FirefoxでAPPドメイン（`app.local.test`）のE2Eテストが失敗
+- サブドメイン間で認証Cookieが共有されず、ログイン済みでも`/login`にリダイレクトされる
+- `input[name="newPassword"]`が見つからずタイムアウト（ページがログインページのため）
+- **根本原因**: 毎回UIログインする方式では、サブドメイン間のCookie共有が不安定
+
+### 🎯 実装内容
+
+Playwrightのベストプラクティスである**storageStateパターン**を実装し、ログイン状態を事前保存することで根本解決。
+
+#### 1. global-setupでstorageStateを生成
+
+**ファイル**: `e2e/global-setup.ts`
+
+グローバルセットアップ時に各ロール（member/admin/owner/ops）でログインし、認証状態を`.auth/`配下にJSON形式で保存。
+
+```typescript
+// storageStateの保存先ディレクトリ (L10-11)
+const authDir = path.join(__dirname, '../.auth')
+
+async function globalSetup(config: FullConfig) {
+  // ... ユーザー作成 ...
+
+  // 3. storageStateを生成（ログイン状態を保存） (L105-117)
+  console.log('🔐 storageStateを生成中...')
+  const browser = await chromium.launch()
+
+  await generateStorageState(browser, 'member@example.com', TEST_PASSWORD, 'member')
+  await generateStorageState(browser, 'admin@example.com', TEST_PASSWORD, 'admin')
+  await generateStorageState(browser, 'owner@example.com', TEST_PASSWORD, 'owner')
+  await generateStorageState(browser, 'ops@example.com', TEST_PASSWORD, 'ops')
+
+  await browser.close()
+}
+
+// ログインしてstorageStateを生成 (L127-171)
+async function generateStorageState(browser, email, password, roleName) {
+  const context = await browser.newContext()
+  const page = await context.newPage()
+
+  try {
+    const loginUrl = roleName === 'ops'
+      ? 'http://ops.local.test:3000/login'
+      : 'http://www.local.test:3000/login'
+
+    await page.goto(loginUrl, { waitUntil: 'networkidle' })
+    await page.fill('input[name="email"]', email)
+    await page.fill('input[name="password"]', password)
+    await page.click('button[type="submit"]:has-text("ログイン")')
+
+    await page.waitForURL((url) => {
+      const urlStr = url.toString()
+      return !urlStr.includes('www.local.test') && !urlStr.includes('ops.local.test/login')
+    }, { timeout: 30000 })
+
+    await page.waitForLoadState('networkidle')
+
+    // storageStateを保存
+    const storagePath = path.join(authDir, `${roleName}.json`)
+    await context.storageState({ path: storagePath })
+
+    console.log(`   ✅ ${roleName} storageState保存: ${storagePath}`)
+  } finally {
+    await context.close()
+  }
+}
+```
+
+#### 2. playwright.config.tsでロール別プロジェクトを定義
+
+**ファイル**: `playwright.config.ts` (L27-120)
+
+各ロールとブラウザの組み合わせごとにプロジェクトを定義し、storageStateを読み込み：
+
+```typescript
+projects: [
+  // Member権限のテスト（APPドメイン用）
+  {
+    name: 'member-chromium',
+    testMatch: /app-domain\.spec\.ts/,
+    use: {
+      ...devices['Desktop Chrome'],
+      storageState: '.auth/member.json',  // 事前保存したログイン状態を読み込み
+      navigationTimeout: 30000,
+      actionTimeout: 10000,
+    },
+  },
+  {
+    name: 'member-firefox',
+    testMatch: /app-domain\.spec\.ts/,
+    use: {
+      ...devices['Desktop Firefox'],
+      storageState: '.auth/member.json',
+      navigationTimeout: 45000,
+      actionTimeout: 15000,
+    },
+  },
+  {
+    name: 'member-webkit',
+    testMatch: /app-domain\.spec\.ts/,
+    use: {
+      ...devices['Desktop Safari'],
+      storageState: '.auth/member.json',
+      navigationTimeout: 60000,
+      actionTimeout: 20000,
+    },
+  },
+
+  // Admin権限のテスト（ADMINドメイン用）
+  {
+    name: 'admin-chromium',
+    testMatch: /admin-domain\.spec\.ts/,
+    use: {
+      ...devices['Desktop Chrome'],
+      storageState: '.auth/admin.json',
+      navigationTimeout: 30000,
+      actionTimeout: 10000,
+    },
+  },
+  // ... admin-firefox, admin-webkit ...
+
+  // その他のテスト（storageState不要）
+  {
+    name: 'chromium',
+    testIgnore: [/app-domain\.spec\.ts/, /admin-domain\.spec\.ts/],
+    use: { ...devices['Desktop Chrome'] },
+  },
+  // ...
+]
+```
+
+#### 3. テストからログイン処理を削除
+
+**ファイル**: `e2e/app-domain.spec.ts`
+
+storageStateで自動的にログイン済みになるため、すべてのテストから`await loginAsMember(page)`を削除し、シリアルモードから並列モードに変更：
+
+```typescript
+// 変更前 (L2-7)
+import { DOMAINS, loginAsMember } from './helpers'
+test.describe.configure({ mode: 'serial' })  // セッション競合を回避
+
+test('1-1. member権限ユーザーのダッシュボードアクセス', async ({ page }) => {
+  await loginAsMember(page)  // ← 削除
+  await expect(page).toHaveURL(/app\.local\.test:3000/)
+})
+
+// 変更後 (L2-7)
+import { DOMAINS } from './helpers'
+test.describe.configure({ mode: 'parallel' })  // 並列実行可能に
+
+test('1-1. member権限ユーザーのダッシュボードアクセス', async ({ page }) => {
+  await page.goto(DOMAINS.APP)  // 直接アクセス（既にログイン済み）
+  await expect(page).toHaveURL(/app\.local\.test:3000/)
+})
+```
+
+全8テストから同様に`loginAsMember()`を削除。
+
+#### 4. 未認証テストの修正
+
+**ファイル**: `e2e/app-domain.spec.ts` (L35-44)
+
+未認証ユーザーのテストでは、Cookieをクリアして未認証状態にする：
+
+```typescript
+test('1-2. 未認証ユーザーのAPPドメインアクセス', async ({ page, context }) => {
+  // storageStateでログイン済みのため、Cookie削除で未認証状態にする
+  await context.clearCookies()
+
+  await page.goto(DOMAINS.APP)
+  await expect(page).toHaveURL(/www\.local\.test:3000\/login/)
+})
+```
+
+#### 5. .gitignoreに追加
+
+**ファイル**: `.gitignore` (L53)
+
+storageStateファイル（認証情報を含む）をGit管理対象外に：
+
+```
+# playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/
+/.auth/  # 追加
+```
+
+### 📁 変更ファイル一覧
+
+| ファイル | 変更内容 | タイプ |
+|---------|---------|--------|
+| `e2e/global-setup.ts` | storageState生成関数を追加（L3-4, L10-11, L105-171） | 変更 |
+| `playwright.config.ts` | ロール別プロジェクトを定義（L27-120） | 変更 |
+| `e2e/app-domain.spec.ts` | ログイン処理削除、並列モードに変更（全体） | 変更 |
+| `e2e/admin-domain.spec.ts` | ログイン処理削除 | 変更 |
+| `.gitignore` | `.auth/`を追加（L53） | 変更 |
+
+### ✅ テスト結果
+
+**修正前**: 1 failed, 3 did not run, 20 passed
+- ❌ Firefox: パスワード変更テスト失敗（Cookie共有問題）
+
+**修正後**: 24 passed (44.9s)
+- ✅ Chromium: 8テスト全て成功
+- ✅ Firefox: 8テスト全て成功
+- ✅ WebKit: 8テスト全て成功
+
+### 💡 効果
+
+1. **Firefox Cookie問題の完全解決**: サブドメイン間の認証が全ブラウザで安定動作
+2. **テスト速度向上**: 毎回ログインする必要がなく、44.9秒で24テスト完了
+3. **保守性向上**: ログイン処理の重複を削減、コードが簡潔に
+4. **並列実行可能**: シリアルモード不要、テスト間の依存関係を削除
+
+### 🔗 関連リンク
+
+- Playwright storageState公式ドキュメント: https://playwright.dev/docs/auth
+- ユーザー分析により根本原因を特定: サブドメイン間Cookie共有の不安定性
+
+---
+
 ## テンプレート（次回の実装記録用）
 
 ```markdown
