@@ -102,11 +102,7 @@ test.describe('ADMINドメイン - 管理画面', () => {
       await expect(page.locator('a:has-text("組織設定")')).toBeVisible()
     })
 
-    test.skip('組織切り替えメニューが表示される', async ({ page }) => {
-      // NOTE: 単一組織のユーザーの場合、組織切り替えメニューは表示されない
-      // 複数組織のユーザー（multiorg@example.com）でテストする必要がある
-      await page.goto(DOMAINS.ADMIN)
-    })
+    // NOTE: 組織切り替えのテストは organization-switching.spec.ts で網羅的にテストされているため削除
 
     test('ユーザー情報が表示される', async ({ page }) => {
       await page.goto(DOMAINS.ADMIN)

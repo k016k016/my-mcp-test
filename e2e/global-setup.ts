@@ -55,7 +55,7 @@ async function globalSetup(config: FullConfig) {
     })
     await createTestOrganization(ownerUser.id, 'Owner Organization', 'owner-org')
 
-    // 一般メンバーユーザー
+    // 一般メンバーユーザー（複数組織に所属）
     const memberUser = await createTestUser('member@example.com', TEST_PASSWORD, {
       companyName: 'Member Company',
       contactName: 'Member User',
@@ -68,6 +68,15 @@ async function globalSetup(config: FullConfig) {
       .update({ role: 'member' })
       .eq('user_id', memberUser.id)
       .eq('organization_id', memberOrg.id)
+
+    // memberユーザー用の2つ目の組織（組織切り替えテスト用）
+    const memberOrg2 = await createTestOrganization(memberUser.id, 'Member Organization 2', 'member-org-2')
+    // この組織でもmember権限に設定
+    await supabase
+      .from('organization_members')
+      .update({ role: 'member' })
+      .eq('user_id', memberUser.id)
+      .eq('organization_id', memberOrg2.id)
 
     // 組織未所属ユーザー
     await createTestUser('noorg@example.com', TEST_PASSWORD, {

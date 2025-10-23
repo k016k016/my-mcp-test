@@ -1,6 +1,6 @@
 // 組織切り替えE2Eテスト - AUTH_FLOW_SPECIFICATION.md セクション4準拠
 import { test, expect } from '@playwright/test'
-import { DOMAINS, loginAsMultiOrg, loginAsAdmin, loginAsMember } from './helpers'
+import { DOMAINS, loginAsMultiOrg, loginAsMember } from './helpers'
 
 // 同じユーザーで複数のテストを実行するため、シリアルモードで実行
 // (Supabaseのセッション競合を回避)
@@ -78,9 +78,14 @@ test.describe('組織切り替え - AUTH_FLOW_SPECIFICATION準拠', () => {
       // 組織切り替えメニューを開く
       await page.click('[data-testid="organization-switcher"]')
 
+      // 組織メニューが表示されるまで待機
+      await page.waitForSelector('[data-testid="organization-menu"]', { state: 'visible' })
+
       // 管理者権限が必要な組織を選択しようとする
       // （この組織では一般メンバーのみの権限）
-      await page.click('[data-testid="org-option-member"]')
+      // data-testidは org-option-{UUID} 形式なので、アクティブでない組織を選択
+      const orgButtons = page.locator('[data-testid^="org-option-"]:not([data-testid="org-option-active"])')
+      await orgButtons.first().click()
 
       // ADMINドメインへのアクセスを試みる
       await page.goto(DOMAINS.ADMIN)
@@ -99,7 +104,7 @@ test.describe('組織切り替え - AUTH_FLOW_SPECIFICATION準拠', () => {
     test('組織切り替えメニューに所属組織が全て表示される', async ({
       page,
     }) => {
-      await loginAsAdmin(page)
+      await loginAsMultiOrg(page)
 
       await page.goto(DOMAINS.APP)
 
@@ -116,7 +121,7 @@ test.describe('組織切り替え - AUTH_FLOW_SPECIFICATION準拠', () => {
     })
 
     test('現在選択中の組織がハイライト表示される', async ({ page }) => {
-      await loginAsAdmin(page)
+      await loginAsMultiOrg(page)
 
       await page.goto(DOMAINS.APP)
 
@@ -131,7 +136,7 @@ test.describe('組織切り替え - AUTH_FLOW_SPECIFICATION準拠', () => {
     test('組織ごとにロール（owner/admin/member）が表示される', async ({
       page,
     }) => {
-      await loginAsAdmin(page)
+      await loginAsMultiOrg(page)
 
       await page.goto(DOMAINS.APP)
 
@@ -156,7 +161,7 @@ test.describe('組織切り替え - AUTH_FLOW_SPECIFICATION準拠', () => {
     test('組織切り替え後、新しい組織のデータが表示される', async ({
       page,
     }) => {
-      await loginAsAdmin(page)
+      await loginAsMultiOrg(page)
 
       await page.goto(DOMAINS.APP)
 
@@ -181,7 +186,7 @@ test.describe('組織切り替え - AUTH_FLOW_SPECIFICATION準拠', () => {
     test('組織切り替え中はローディング状態が表示される', async ({
       page,
     }) => {
-      await loginAsAdmin(page)
+      await loginAsMultiOrg(page)
 
       await page.goto(DOMAINS.APP)
 
@@ -202,7 +207,7 @@ test.describe('組織切り替え - AUTH_FLOW_SPECIFICATION準拠', () => {
     test('組織切り替え後、current_organization_id Cookieが更新される', async ({
       page,
     }) => {
-      await loginAsAdmin(page)
+      await loginAsMultiOrg(page)
 
       await page.goto(DOMAINS.APP)
 

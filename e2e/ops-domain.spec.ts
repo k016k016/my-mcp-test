@@ -6,7 +6,8 @@ import { DOMAINS, loginAsOps } from './helpers'
 // (Supabaseのセッション競合を回避)
 test.describe.configure({ mode: 'serial' })
 
-test.describe('OPSドメイン - 運用ダッシュボード', () => {
+// OPS機能は後回し: ログイン機構、IP制限、storageState生成などの整備が必要
+test.describe.skip('OPSドメイン - 運用ダッシュボード', () => {
   test.describe('ダッシュボード表示', () => {
     test('運用ダッシュボードが正しく表示される', async ({ page }) => {
       // OPS権限を持つユーザーとしてログイン

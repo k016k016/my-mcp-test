@@ -96,20 +96,13 @@ export async function loginAs(page: Page, userType: UserType) {
   await submitButton.click()
 
   // ログイン後のリダイレクトを待機（WWWドメイン以外にリダイレクトされるまで待つ）
-  // Firefox/Webkitはリダイレクトが遅いため、タイムアウトを長めに設定
-  // また、URLが変わったことを確実に確認
+  // waitForURLでナビゲーション完了を確認（networkidleは不要）
   await page.waitForURL((url) => {
     const urlStr = url.toString()
     const isNotWWW = !urlStr.includes('www.local.test')
     const hasChanged = urlStr !== beforeUrl
     return isNotWWW && hasChanged
-  }, { timeout: 30000 }) // より長いタイムアウト
-
-  // ページが完全にロードされるまで待機
-  await page.waitForLoadState('networkidle')
-
-  // 追加の安定性確保：DOM が準備完了まで待機
-  await page.waitForLoadState('domcontentloaded')
+  }, { timeout: 10000 }) // 10秒で十分（RSC環境ではnetworkidleは30秒タイムアウトまで待つ）
 }
 
 /**
@@ -155,7 +148,7 @@ export async function loginAsNoOrg(page: Page) {
 export async function loginAsMultiOrg(page: Page) {
   const user = TEST_USERS['multi-org']
 
-  await page.goto(`${DOMAINS.WWW}/login`, { waitUntil: 'networkidle' })
+  await page.goto(`${DOMAINS.WWW}/login`)
 
   // フォームが表示されるまで待機
   await page.waitForSelector('input[name="email"]', { state: 'visible' })
@@ -189,11 +182,7 @@ export async function loginAsMultiOrg(page: Page) {
     const isAdmin = /admin\.local\.test(:\d+)?/.test(urlStr)
     const hasChanged = urlStr !== beforeUrl
     return isAdmin && hasChanged
-  }, { timeout: 30000 })
-
-  // ページが完全にロードされるまで待機
-  await page.waitForLoadState('networkidle')
-  await page.waitForLoadState('domcontentloaded')
+  }, { timeout: 10000 }) // 10秒で十分
 }
 
 /**
