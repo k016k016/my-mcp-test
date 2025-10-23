@@ -178,27 +178,22 @@ export async function signIn(formData: FormData) {
       return { error: 'ログインに失敗しました。もう一度お試しください。' }
     }
 
-    // ログイン成功 - ユーザーの権限に応じてリダイレクト
+    // ログイン成功 - ユーザーの権限に応じてリダイレクト先を決定
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
-      console.log('[signIn] Login successful for user:', user.id)
+      console.error('[signIn] Login successful for user:', user.id)
       const redirectUrl = await getRedirectUrlForUser(user)
-      console.log('[signIn] Redirecting to:', redirectUrl)
+      console.error('[signIn] Redirecting to:', redirectUrl)
       revalidatePath('/', 'layout')
-      redirect(redirectUrl)
+      // クロスドメインリダイレクトのため、URLを返す（redirect()は同一ドメイン内のみサポート）
+      return { success: true, redirectUrl }
     } else {
-      console.log('[signIn] No user found after login, redirecting to APP')
+      console.error('[signIn] No user found after login, redirecting to APP')
       revalidatePath('/', 'layout')
-      redirect(env.NEXT_PUBLIC_APP_URL)
+      return { success: true, redirectUrl: env.NEXT_PUBLIC_APP_URL }
     }
   } catch (error) {
     console.error('[signIn] Unexpected error:', error)
-
-    // redirectはthrowするので、それ以外のエラーのみキャッチ
-    if (error && typeof error === 'object' && 'digest' in error) {
-      throw error
-    }
-
     return { error: '予期しないエラーが発生しました。もう一度お試しください。' }
   }
 }

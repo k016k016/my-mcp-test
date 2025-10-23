@@ -25,19 +25,19 @@ export default function LoginForm() {
       const formData = new FormData(e.currentTarget)
       const result = await signIn(formData)
 
-      // エラーの場合のみここに到達（redirect()は例外をthrowするため）
+      // ログイン成功の場合、クロスドメインリダイレクトを実行
+      if (result?.success && result.redirectUrl) {
+        // クロスドメインリダイレクトのため、window.location.hrefを使用
+        window.location.href = result.redirectUrl
+        return
+      }
+
+      // エラーの場合
       if (result?.error) {
         setError(result.error)
         setIsLoading(false)
       }
     } catch (err) {
-      // redirect()による例外は正常なフローなので無視
-      // それ以外のエラーのみ処理
-      if (err && typeof err === 'object' && 'digest' in err) {
-        // Next.jsのredirectエラー - 正常なフロー
-        return
-      }
-
       console.error('ログインエラー:', err)
       setError('ログイン処理中にエラーが発生しました')
       setIsLoading(false)

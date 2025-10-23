@@ -70,6 +70,33 @@ async function globalSetup() {
       contactName: 'No Org User',
     })
 
+    // 複数組織所属ユーザー（multiorg）
+    const multiOrgUser = await createTestUser('multiorg@example.com', TEST_PASSWORD, {
+      companyName: 'Multi Org Company',
+      contactName: 'Multi Org User',
+    })
+
+    // 組織1: MultiOrg Owner Organization（owner権限） - 名前を一意に
+    const ownerOrganization = await createTestOrganization(
+      multiOrgUser.id,
+      'MultiOrg Owner Organization',
+      'multiorg-owner-org'
+    )
+    // デフォルトでownerになるので、権限変更は不要
+
+    // 組織2: MultiOrg Admin Organization（admin権限） - 名前を一意に
+    const adminOrganization = await createTestOrganization(
+      multiOrgUser.id,
+      'MultiOrg Admin Organization',
+      'multiorg-admin-org'
+    )
+    // admin権限に変更
+    await supabase
+      .from('organization_members')
+      .update({ role: 'admin' })
+      .eq('user_id', multiOrgUser.id)
+      .eq('organization_id', adminOrganization.id)
+
     console.log('✅ グローバルセットアップ完了')
   } catch (error) {
     console.error('❌ グローバルセットアップ失敗:', error)

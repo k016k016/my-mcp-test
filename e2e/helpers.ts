@@ -34,6 +34,12 @@ export const TEST_USERS = {
     email: 'noorg@example.com',
     password: 'test1234',
   },
+  'multi-org': {
+    email: 'multiorg@example.com',
+    password: 'test1234',
+    organizations: ['MultiOrg Owner Organization', 'MultiOrg Admin Organization'],
+    roles: ['owner', 'admin'],
+  },
 } as const
 
 /**
@@ -137,6 +143,55 @@ export async function loginAsMember(page: Page) {
  */
 export async function loginAsNoOrg(page: Page) {
   return loginAs(page, 'no-org')
+}
+
+/**
+ * 複数組織に所属するユーザーとしてログイン
+ * - Owner Organization (owner権限)
+ * - Admin Organization (admin権限)
+ */
+export async function loginAsMultiOrg(page: Page) {
+  const user = TEST_USERS['multi-org']
+
+  await page.goto(`${DOMAINS.WWW}/login`, { waitUntil: 'networkidle' })
+
+  // フォームが表示されるまで待機
+  await page.waitForSelector('input[name="email"]', { state: 'visible' })
+  await page.waitForSelector('input[name="password"]', { state: 'visible' })
+
+  // 入力フィールドに値を入力
+  await page.locator('input[name="email"]').fill(user.email)
+  await page.locator('input[name="password"]').fill(user.password)
+
+  // 入力値が確実に設定されたか確認
+  await page.waitForFunction(
+    ({ email, password }) => {
+      const emailInput = document.querySelector('input[name="email"]') as HTMLInputElement
+      const passwordInput = document.querySelector('input[name="password"]') as HTMLInputElement
+      return emailInput?.value === email && passwordInput?.value === password
+    },
+    { email: user.email, password: user.password },
+    { timeout: 5000 }
+  )
+
+  // submitボタンをクリック
+  const submitButton = page.getByRole('button', { name: 'ログイン', exact: true })
+  await submitButton.waitFor({ state: 'visible' })
+
+  const beforeUrl = page.url()
+  await submitButton.click()
+
+  // owner権限があるため、ADMINドメインにリダイレクト（ポート番号は問わない）
+  await page.waitForURL((url) => {
+    const urlStr = url.toString()
+    const isAdmin = /admin\.local\.test(:\d+)?/.test(urlStr)
+    const hasChanged = urlStr !== beforeUrl
+    return isAdmin && hasChanged
+  }, { timeout: 30000 })
+
+  // ページが完全にロードされるまで待機
+  await page.waitForLoadState('networkidle')
+  await page.waitForLoadState('domcontentloaded')
 }
 
 /**
