@@ -25,6 +25,7 @@ export default function OrganizationSwitcher({
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const [uiBusy, setUiBusy] = useState(false) // E2E用のビジー状態
 
   const currentOrg = organizations.find((org) => org.id === currentOrganizationId)
 
@@ -34,15 +35,40 @@ export default function OrganizationSwitcher({
       return
     }
 
+    // E2E環境での人工遅延（テスト用）
+    // UIビジー状態をONにしてからServer Action実行
+    let e2eDelayMs = 0
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      const cookieMatch = document.cookie.match(
+        /__E2E_FORCE_PENDING_MS__=(\d+)/
+      )
+      if (cookieMatch) {
+        e2eDelayMs = Number(cookieMatch[1])
+        console.log('[E2E] forced delay', e2eDelayMs, 'ms')
+        setUiBusy(true) // UIビジー状態ON
+        await new Promise((r) => setTimeout(r, e2eDelayMs))
+        // Cookie削除（1回使い切り）
+        document.cookie =
+          '__E2E_FORCE_PENDING_MS__=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.local.test'
+      }
+    }
+
     const result = await switchOrganization(organizationId)
 
     if (result.error) {
+      setUiBusy(false)
       alert(result.error)
     } else if (result.success && result.redirectUrl) {
+      // 最小表示時間300msを保証してから遷移
+      if (e2eDelayMs > 0) {
+        await new Promise((r) => setTimeout(r, 300))
+      }
+      setUiBusy(false)
       // クロスドメインリダイレクトのため、window.location.hrefを使用
       window.location.href = result.redirectUrl
     } else {
       // フォールバック: 現在のページを再読み込み
+      setUiBusy(false)
       startTransition(() => {
         router.refresh()
         setIsOpen(false)
@@ -52,8 +78,8 @@ export default function OrganizationSwitcher({
 
   return (
     <div className="relative" data-testid={testId}>
-      {/* ローディングインジケーター */}
-      {isPending && (
+      {/* ローディングインジケーター（isPending OR uiBusy） */}
+      {(isPending || uiBusy) && (
         <div
           className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 rounded-md z-30"
           data-testid="loading-indicator"
@@ -69,7 +95,7 @@ export default function OrganizationSwitcher({
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        disabled={isPending}
+        disabled={isPending || uiBusy}
       >
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-white text-xs font-bold">

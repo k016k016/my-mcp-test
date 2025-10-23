@@ -248,3 +248,29 @@ export async function expectSuccessMessage(page: Page, message: string) {
   const successLocator = page.locator(`text=${message}`)
   await successLocator.waitFor({ state: 'visible', timeout: 5000 })
 }
+
+/**
+ * E2E環境でローディングインジケーター表示を確実にするための遅延フラグを設定
+ *
+ * Cookie方式を使用（全サブドメインで有効）
+ *
+ * @param page - Playwrightのページオブジェクト
+ * @param delayMs - 遅延時間（ミリ秒）デフォルト: 700ms
+ *
+ * @example
+ * ```typescript
+ * await setE2EFlag(page, 700)
+ * // これ以降、組織切り替え時に700ms遅延が入る
+ * ```
+ */
+export async function setE2EFlag(page: Page, delayMs = 700) {
+  await page.context().addCookies([
+    {
+      name: '__E2E_FORCE_PENDING_MS__',
+      value: String(delayMs),
+      domain: '.local.test',
+      path: '/',
+      sameSite: 'Lax',
+    },
+  ])
+}
