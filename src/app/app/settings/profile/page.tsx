@@ -67,11 +67,29 @@ export default function ProfilePage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setSaving(true)
     setMessage(null)
 
+    // E2E環境での人工遅延（テスト用）
+    let e2eDelayMs = 0
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      const cookieMatch = document.cookie.match(/__E2E_FORCE_PENDING_MS__=(\d+)/)
+      if (cookieMatch) {
+        e2eDelayMs = Number(cookieMatch[1])
+        setSaving(true) // ローディング状態ON（処理開始前）
+        await new Promise((r) => setTimeout(r, e2eDelayMs))
+        // Cookie削除（1回使い切り）
+        document.cookie =
+          '__E2E_FORCE_PENDING_MS__=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.local.test'
+      }
+    }
+
+    if (!saving) setSaving(true)
+
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!user) {
+      setSaving(false)
+      return
+    }
 
     const { error } = await supabase
       .from('profiles')
@@ -80,6 +98,11 @@ export default function ProfilePage() {
         company_name: companyName,
       })
       .eq('id', user.id)
+
+    // 最小表示時間300msを保証
+    if (e2eDelayMs > 0) {
+      await new Promise((r) => setTimeout(r, 300))
+    }
 
     if (error) {
       setMessage({ type: 'error', text: '保存に失敗しました: ' + error.message })
@@ -105,12 +128,31 @@ export default function ProfilePage() {
       return
     }
 
-    setChangingPassword(true)
+    // E2E環境での人工遅延（テスト用）
+    let e2eDelayMs = 0
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      const cookieMatch = document.cookie.match(/__E2E_FORCE_PENDING_MS__=(\d+)/)
+      if (cookieMatch) {
+        e2eDelayMs = Number(cookieMatch[1])
+        setChangingPassword(true) // ローディング状態ON（処理開始前）
+        await new Promise((r) => setTimeout(r, e2eDelayMs))
+        // Cookie削除（1回使い切り）
+        document.cookie =
+          '__E2E_FORCE_PENDING_MS__=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.local.test'
+      }
+    }
+
+    if (!changingPassword) setChangingPassword(true)
 
     // Supabaseのパスワード変更
     const { error } = await supabase.auth.updateUser({
       password: newPassword
     })
+
+    // 最小表示時間300msを保証
+    if (e2eDelayMs > 0) {
+      await new Promise((r) => setTimeout(r, 300))
+    }
 
     if (error) {
       setPasswordMessage({ type: 'error', text: 'パスワード変更に失敗しました: ' + error.message })
@@ -227,7 +269,18 @@ export default function ProfilePage() {
             />
           </div>
 
-          <div className="pt-4">
+          <div className="pt-4 relative">
+            {saving && (
+              <div
+                className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 rounded-lg z-10"
+                data-testid="profile-save-loading"
+              >
+                <svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </div>
+            )}
             <button
               type="submit"
               disabled={saving}
@@ -291,7 +344,18 @@ export default function ProfilePage() {
             />
           </div>
 
-          <div className="pt-4">
+          <div className="pt-4 relative">
+            {changingPassword && (
+              <div
+                className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 rounded-lg z-10"
+                data-testid="password-change-loading"
+              >
+                <svg className="animate-spin h-5 w-5 text-purple-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </div>
+            )}
             <button
               type="submit"
               disabled={changingPassword}

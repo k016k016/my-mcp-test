@@ -1,6 +1,6 @@
 // APPドメインE2Eテスト - E2E_TEST_APP_DOMAIN.md準拠
 import { test, expect } from '@playwright/test'
-import { DOMAINS } from './helpers'
+import { DOMAINS, setE2EFlag } from './helpers'
 
 // storageStateでログイン済みのため、シリアルモードは不要
 // 各テストは独立して並列実行可能
@@ -80,8 +80,12 @@ test.describe('APPドメイン - 一般ユーザー向けダッシュボード',
         timeout: 10000,
       })
 
+      // 成功メッセージが消えるまで待つ（UI変化待ちパターン）
+      await expect(page.locator('text=プロフィールを更新しました')).toBeHidden({
+        timeout: 10000,
+      })
+
       // テスト後、元の名前に戻す（データをクリーンアップ）
-      await page.waitForTimeout(2000) // フォームが再び編集可能になるまで待つ（Firefox/WebKit対応）
       await page.locator('input[name="fullName"]').fill(originalName || 'Member User')
       await page.click('button[type="submit"]:has-text("保存")')
       await expect(page.locator('text=プロフィールを更新しました')).toBeVisible({
@@ -109,8 +113,12 @@ test.describe('APPドメイン - 一般ユーザー向けダッシュボード',
         timeout: 15000,
       })
 
+      // 成功メッセージが消えるまで待つ（UI変化待ちパターン）
+      await expect(page.locator('text=パスワードを変更しました')).toBeHidden({
+        timeout: 10000,
+      })
+
       // テスト後、パスワードを元に戻す（後続のテストのため）
-      await page.waitForTimeout(2000) // フォームが再び編集可能になるまで待つ
       await page.fill('input[name="newPassword"]', 'test1234')
       await page.fill('input[name="confirmPassword"]', 'test1234')
       await page.click('button:has-text("パスワードを変更")')
@@ -133,6 +141,72 @@ test.describe('APPドメイン - 一般ユーザー向けダッシュボード',
       await expect(
         page.locator('text=/新しいパスワードが一致しません|パスワードが一致しません/')
       ).toBeVisible({ timeout: 5000 })
+    })
+
+    test('2-5. プロフィール保存時のローディング表示', async ({ page }) => {
+      await page.goto(`${DOMAINS.APP}/settings/profile`, { waitUntil: 'networkidle' })
+
+      // E2E遅延フラグをセット（300ms）
+      await setE2EFlag(page, 300)
+
+      // 名前フィールドを変更
+      await page.fill('input[name="fullName"]', 'Test Loading Indicator')
+
+      const loader = page.getByTestId('profile-save-loading')
+
+      // 保存ボタンクリックと並行してローディングインジケーターのライフサイクルを検証
+      await Promise.all([
+        (async () => {
+          await expect(loader).toBeAttached({ timeout: 2000 })
+          await expect(loader).toBeVisible({ timeout: 2000 })
+          await expect(loader).toBeHidden({ timeout: 10000 })
+        })(),
+        page.click('button[type="submit"]:has-text("保存")'),
+      ])
+
+      // 成功メッセージが表示されることを確認
+      await expect(page.locator('text=プロフィールを更新しました')).toBeVisible({
+        timeout: 5000,
+      })
+    })
+
+    test('2-6. パスワード変更時のローディング表示', async ({ page }) => {
+      await page.goto(`${DOMAINS.APP}/settings/profile`, { waitUntil: 'networkidle' })
+
+      // E2E遅延フラグをセット（300ms）
+      await setE2EFlag(page, 300)
+
+      // パスワード入力
+      await page.fill('input[name="newPassword"]', 'newpass456')
+      await page.fill('input[name="confirmPassword"]', 'newpass456')
+
+      const loader = page.getByTestId('password-change-loading')
+
+      // パスワード変更ボタンクリックと並行してローディングインジケーターのライフサイクルを検証
+      await Promise.all([
+        (async () => {
+          await expect(loader).toBeAttached({ timeout: 2000 })
+          await expect(loader).toBeVisible({ timeout: 2000 })
+          await expect(loader).toBeHidden({ timeout: 10000 })
+        })(),
+        page.click('button:has-text("パスワードを変更")'),
+      ])
+
+      // 成功メッセージが表示されることを確認
+      await expect(page.locator('text=パスワードを変更しました')).toBeVisible({
+        timeout: 5000,
+      })
+
+      // パスワードを元に戻す
+      await expect(page.locator('text=パスワードを変更しました')).toBeHidden({
+        timeout: 10000,
+      })
+      await page.fill('input[name="newPassword"]', 'test1234')
+      await page.fill('input[name="confirmPassword"]', 'test1234')
+      await page.click('button:has-text("パスワードを変更")')
+      await expect(page.locator('text=パスワードを変更しました')).toBeVisible({
+        timeout: 5000,
+      })
     })
   })
 
