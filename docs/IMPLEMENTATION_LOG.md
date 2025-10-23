@@ -1843,6 +1843,157 @@ Running 15 tests using 3 workers
 
 ---
 
+## 2025-10-23: クロスドメインリダイレクトとE2Eテストの修正
+
+### 📌 実装の背景
+
+E2Eテスト（組織切り替え機能）で以下の問題が発生していました：
+
+1. **クロスドメインリダイレクトの失敗**: Next.js 13+ のServer Action内の`redirect()`関数が、クロスドメイン（`www.local.test` → `admin.local.test`）をサポートしていない
+2. **E2Eテストデータの重複**: `global-setup.ts`で組織名が重複しており、2番目の組織作成時に1番目の組織が削除されていた
+3. **テスト期待値の厳しさ**: Playwrightテストの期待値がポート番号を厳密にチェックしすぎていた
+
+### 🎯 実装内容
+
+#### 1. クロスドメインリダイレクトの修正
+
+**問題**: Next.js Server Action内の`redirect()`はクロスドメインをサポートしていない
+
+**ファイル**: `src/app/actions/auth.ts`
+
+```typescript
+// 修正前
+const redirectUrl = await getRedirectUrlForUser(user)
+redirect(redirectUrl)  // ❌ クロスドメインリダイレクトが動作しない
+
+// 修正後
+const redirectUrl = await getRedirectUrlForUser(user)
+return { success: true, redirectUrl }  // ✅ URLを返す
+```
+
+**ファイル**: `src/components/LoginForm.tsx`
+
+```typescript
+// Client Componentでクロスドメインリダイレクトを実行
+const result = await signIn(formData)
+
+if (result?.success && result.redirectUrl) {
+  window.location.href = result.redirectUrl  // ✅ クライアントサイドリダイレクト
+  return
+}
+```
+
+**動作**:
+- Server Actionは`redirect()`の代わりにリダイレクト先URLを返す
+- Client Componentが`window.location.href`でクロスドメインリダイレクトを実行
+- `www.local.test:3000` → `admin.local.test:3000`の遷移が正常に動作
+
+#### 2. E2Eテストデータの重複修正
+
+**問題**: 組織名が重複していた
+
+**ファイル**: `e2e/global-setup.ts`
+
+```typescript
+// 修正前（同じ名前で重複）
+await createTestOrganization(ownerUser.id, 'Owner Organization', 'owner-org')
+await createTestOrganization(multiOrgUser.id, 'Owner Organization', 'owner-org-multiorg')  // ❌ 重複
+
+// 修正後（一意な名前に変更）
+await createTestOrganization(ownerUser.id, 'Owner Organization', 'owner-org')
+await createTestOrganization(multiOrgUser.id, 'MultiOrg Owner Organization', 'multiorg-owner-org')  // ✅ 一意
+await createTestOrganization(multiOrgUser.id, 'MultiOrg Admin Organization', 'multiorg-admin-org')  // ✅ 一意
+```
+
+**ファイル**: `e2e/helpers.ts`
+
+```typescript
+// TEST_USERSの組織名も更新
+'multi-org': {
+  email: 'multiorg@example.com',
+  password: 'test1234',
+  organizations: ['MultiOrg Owner Organization', 'MultiOrg Admin Organization'],  // 更新
+  roles: ['owner', 'admin'],
+}
+```
+
+**効果**:
+- 組織作成時に既存組織が削除されなくなった
+- `owner@example.com`が正しく1つの組織に所属
+- `multiorg@example.com`が正しく2つの組織に所属
+
+#### 3. Playwrightテストの期待値を柔軟化
+
+**ファイル**: `e2e/organization-switching.spec.ts`, `e2e/organization-switching-simple.spec.ts`, `e2e/helpers.ts`
+
+```typescript
+// 修正前
+await expect(page).toHaveURL(/admin\.local.test:3000/, { timeout: 5000 })  // ❌ ポート番号が厳密
+
+// 修正後
+await expect(page).toHaveURL(/admin\.local\.test(:\d+)?/, { timeout: 5000 })  // ✅ ポート番号オプショナル
+```
+
+**効果**:
+- ポート番号の有無に関わらずテストが成功
+- 本番環境（ポート番号なし）でも動作可能
+
+### 📁 変更ファイル一覧
+
+| ファイル | 変更内容 | タイプ |
+|---------|---------|--------|
+| `src/app/actions/auth.ts` | redirect()をURLを返す形式に変更 | 変更 |
+| `src/components/LoginForm.tsx` | window.location.hrefでリダイレクト実行 | 変更 |
+| `e2e/global-setup.ts` | 組織名を一意に変更（MultiOrg Owner/Admin Organization） | 変更 |
+| `e2e/helpers.ts` | TEST_USERSの組織名を更新、正規表現を調整 | 変更 |
+| `e2e/organization-switching.spec.ts` | ポート番号をオプショナルに（replace_all） | 変更 |
+| `e2e/organization-switching-simple.spec.ts` | 新規テストファイル、ポート番号オプショナル | 新規 |
+
+### ✅ テスト項目
+
+- [x] ログイン後のクロスドメインリダイレクトが動作する（www → admin）
+- [x] E2Eテストで組織名の重複が解消されている
+- [x] owner@example.comが1つの組織に所属している
+- [x] multiorg@example.comが2つの組織に所属している
+- [x] Playwrightテストがポート番号の有無に関わらず成功する
+- [x] E2Eテスト全15個が成功（Chromium、Firefox、Webkit × 5テスト）
+
+### 🔄 テスト結果
+
+```
+✅ 15/15 passed (46.9s)
+
+テストケース:
+1. 組織切り替えUIが表示される ✅
+2. 組織を切り替えると表示が更新される ✅
+3. ローディングインジケーターが表示される ✅
+4. 組織切り替え後、Cookieが更新される ✅
+5. 単一組織のユーザーには組織切り替えが表示されない ✅
+
+各テストがChromium、Firefox、Webkitで成功
+```
+
+### 🔧 技術的なポイント
+
+#### Next.js Server Actionsの制約
+- `redirect()`は同一ドメイン内でのみ動作
+- クロスドメインリダイレクトは`window.location.href`を使用する必要がある
+- Server ActionからURLを返し、Client Componentでリダイレクトを実行
+
+#### E2Eテストデータの設計
+- 組織名は一意である必要がある
+- セットアップスクリプトで名前重複チェックがないため、明示的に一意にする
+- テストアカウントの組織情報はTEST_USERSとglobal-setupで一致させる
+
+### 🔗 関連リンク
+
+- E2Eテスト: `e2e/organization-switching-simple.spec.ts`
+- 認証アクション: `src/app/actions/auth.ts:181`
+- ログインフォーム: `src/components/LoginForm.tsx:19`
+- テストセットアップ: `e2e/global-setup.ts:73`
+
+---
+
 ## テンプレート（次回の実装記録用）
 
 ```markdown
