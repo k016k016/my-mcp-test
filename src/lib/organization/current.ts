@@ -26,7 +26,7 @@ export async function setCurrentOrganizationId(organizationId: string) {
   const cookieOptions: any = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    sameSite: 'strict', // CSRF攻撃を防ぐため、strictに設定
     maxAge: 60 * 60 * 24 * 30, // 30日間
     path: '/',
   }

@@ -356,13 +356,11 @@ export async function switchOrganization(organizationId: string) {
 
     revalidatePath('/', 'layout')
 
-    if (isAdmin) {
-      // 管理者権限がある場合はADMIN画面へ
-      redirect(adminUrl)
-    } else {
-      // 一般メンバーの場合はAPP画面へ
-      redirect(appUrl)
-    }
+    const redirectUrl = isAdmin ? adminUrl : appUrl
+
+    // クロスドメインリダイレクトのため、URLを返す
+    // クライアント側でwindow.location.hrefを使用してリダイレクト
+    return { success: true, redirectUrl }
   } catch (error) {
     console.error('[switchOrganization] Unexpected error:', error)
 

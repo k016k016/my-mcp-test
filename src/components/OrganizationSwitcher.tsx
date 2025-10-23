@@ -38,7 +38,11 @@ export default function OrganizationSwitcher({
 
     if (result.error) {
       alert(result.error)
+    } else if (result.success && result.redirectUrl) {
+      // クロスドメインリダイレクトのため、window.location.hrefを使用
+      window.location.href = result.redirectUrl
     } else {
+      // フォールバック: 現在のページを再読み込み
       startTransition(() => {
         router.refresh()
         setIsOpen(false)
