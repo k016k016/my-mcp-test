@@ -4,6 +4,60 @@
 
 ---
 
+## 2025-01-23: トライアル機能の完全削除
+
+### 📌 実装の背景
+
+トライアル期間機能は基本的に使用しないという方針決定に基づき、`'trialing'`ステータスと`trial_ends_at`カラムを完全に削除。
+
+### 🎯 実装内容
+
+#### 1. データベーススキーマ変更
+
+**ファイル**: `supabase/migrations/20250123000001_remove_trialing_status.sql`
+
+- 既存の`'trialing'`データを`'active'`に更新
+- `subscription_status` ENUMから`'trialing'`を削除
+- ENUMの再作成: `'active' | 'past_due' | 'canceled' | 'incomplete'`
+- デフォルト値を`'active'`に変更
+
+#### 2. TypeScript型定義の更新
+
+**ファイル**: `src/types/database.ts`
+
+```typescript
+// Before
+export type SubscriptionStatus = 'active' | 'trialing' | 'past_due' | 'canceled' | 'incomplete'
+
+// After
+export type SubscriptionStatus = 'active' | 'past_due' | 'canceled' | 'incomplete'
+```
+
+#### 3. UI表示ロジックの修正
+
+**修正ファイル**:
+- `src/components/SubscriptionCard.tsx` - `'trialing'`バッジ表示を削除
+- `src/app/app/organization/page.tsx` - trialing判定の三項演算子を削除
+- `src/app/ops/page.tsx` - デフォルト値`|| 'trialing'`を削除
+
+#### 4. テストとドキュメントの整理
+
+**テスト**:
+- `src/components/__tests__/SubscriptionCard.test.tsx` - trialingテストとモックデータの`trial_ends_at`を削除
+
+**ドキュメント**:
+- `docs/specifications/DATABASE_SCHEMA.md` - スキーマ定義から`trialing`と`trial_ends_at`を削除
+- `docs/project/PROJECT_PROGRESS.md` - 「14日間トライアル」記述を削除
+
+### ✅ 結果
+
+- **データベース**: `'trialing'`ステータス完全削除、既存データは`'active'`に移行
+- **新規組織**: `subscription_status: 'active'`で作成
+- **テスト**: 全422テスト合格（100%）
+- **コードベース**: トライアル関連コード完全削除（Chargebee APIパラメータを除く）
+
+---
+
 ## 2025-01-16: 認証フロー統一とリダイレクト実装
 
 ### 📌 実装の背景
@@ -487,10 +541,8 @@ const { data: organization } = await supabase
   .from('organizations')
   .insert({
     name: companyName,
-    slug: uniqueSlug,
     subscription_plan: 'free',
-    subscription_status: 'trialing',
-    trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+    subscription_status: 'active',
   })
   .select()
   .single()
@@ -1991,6 +2043,106 @@ await expect(page).toHaveURL(/admin\.local\.test(:\d+)?/, { timeout: 5000 })  //
 - 認証アクション: `src/app/actions/auth.ts:181`
 - ログインフォーム: `src/components/LoginForm.tsx:19`
 - テストセットアップ: `e2e/global-setup.ts:73`
+
+---
+
+## 2025-10-23: 組織設定フォーム修正とE2Eテスト追加
+
+### 📌 実装の背景
+
+組織情報更新フォームで成功メッセージが表示されない問題が発生していました。調査の結果、`updateOrganization` Server Actionが`FormData`ではなく`UpdateOrganizationInput`オブジェクトを期待しているのに、フォームから`FormData`を渡していたことが原因でした。
+
+### 🎯 実装内容
+
+#### 1. 組織設定フォームの引数修正
+
+**ファイル**: `src/components/OrganizationSettingsForm.tsx`
+
+```typescript
+// 変更前 (L20-29)
+async function handleSubmit(e: React.FormEvent) {
+  e.preventDefault()
+  setError(null)
+  setSuccess(false)
+  setIsLoading(true)
+
+  const formData = new FormData()
+  formData.append('name', name)
+
+  const result = await updateOrganization(organization.id, formData)
+
+// 変更後 (L20-27)
+async function handleSubmit(e: React.FormEvent) {
+  e.preventDefault()
+  setError(null)
+  setSuccess(false)
+  setIsLoading(true)
+
+  // updateOrganizationはオブジェクトを期待している（FormDataではない）
+  const result = await updateOrganization(organization.id, { name })
+```
+
+**動作**:
+- `FormData`を作成する代わりに、直接オブジェクト`{ name }`を渡す
+- Server Actionの型定義`UpdateOrganizationInput`に合致
+- 成功時に成功メッセージ「組織情報を更新しました」が正しく表示される
+
+#### 2. E2Eテストの追加
+
+**ファイル**: `e2e/admin-domain.spec.ts`
+
+```typescript
+// 変更前 (L39-43) - テストをスキップ
+test.skip('組織情報を更新できる', async ({ page }) => {
+  // TODO: Server Actionのレスポンスとクライアント側の成功メッセージ表示を調査
+  // 現状、成功メッセージが表示されていない
+  await page.goto(`${DOMAINS.ADMIN}/settings`)
+})
+
+// 変更後 (L39-51) - 実際のテストコード
+test('組織情報を更新できる', async ({ page }) => {
+  await page.goto(`${DOMAINS.ADMIN}/settings`)
+
+  // 組織名を変更
+  const newName = `テスト組織 ${Date.now()}`
+  await page.fill('input[name="name"]', newName)
+
+  // 保存ボタンをクリック
+  await page.click('button[type="submit"]:has-text("変更を保存")')
+
+  // 成功メッセージが表示される
+  await expect(page.locator('text=組織情報を更新しました')).toBeVisible({ timeout: 10000 })
+})
+```
+
+**動作**:
+- `.skip`を削除してテストを有効化
+- フォームに新しい組織名を入力
+- 保存ボタンをクリック
+- 成功メッセージの表示を確認（タイムアウト10秒）
+
+### 📁 変更ファイル一覧
+
+| ファイル | 変更内容 | タイプ |
+|---------|---------|--------|
+| `src/components/OrganizationSettingsForm.tsx` | FormData渡しからオブジェクト渡しに修正 | 変更 |
+| `e2e/admin-domain.spec.ts` | 組織情報更新テストのskip削除と実装 | 変更 |
+
+### ✅ テスト結果
+
+**修正前**: 24 skipped, 21 passed
+**修正後**: 21 skipped, 24 passed
+
+- ✅ chromium: 組織情報を更新できる
+- ✅ firefox: 組織情報を更新できる
+- ✅ webkit: 組織情報を更新できる
+
+すべてのブラウザで組織情報更新テストが合格しました。
+
+### 🔗 関連リンク
+
+- Server Action型定義: `src/types/database.ts:200` (`UpdateOrganizationInput`)
+- Server Action実装: `src/app/actions/organization.ts:135` (`updateOrganization`)
 
 ---
 

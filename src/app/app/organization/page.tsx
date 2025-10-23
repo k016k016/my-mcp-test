@@ -208,15 +208,11 @@ export default async function OrganizationInfoPage() {
                   className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                     organization.subscription_status === 'active'
                       ? 'bg-green-100 text-green-800'
-                      : organization.subscription_status === 'trialing'
-                      ? 'bg-blue-100 text-blue-800'
                       : 'bg-gray-100 text-gray-800'
                   }`}
                 >
                   {organization.subscription_status === 'active'
                     ? '有効'
-                    : organization.subscription_status === 'trialing'
-                    ? 'トライアル中'
                     : organization.subscription_status}
                 </span>
               </div>

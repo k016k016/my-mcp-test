@@ -141,7 +141,7 @@ export default async function OpsPage() {
                             : 'bg-yellow-900 text-yellow-300'
                         }`}
                       >
-                        {org.subscription_status || 'trialing'}
+                        {org.subscription_status}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-gray-400 text-sm">

@@ -40,8 +40,6 @@ export default function SubscriptionCard({
     switch (status) {
       case 'active':
         return <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">有効</span>
-      case 'trialing':
-        return <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">トライアル中</span>
       case 'past_due':
         return <span className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">支払い期限超過</span>
       case 'canceled':

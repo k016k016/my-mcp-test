@@ -7,7 +7,7 @@
 
 export type OrganizationRole = 'owner' | 'admin' | 'member'
 
-export type SubscriptionStatus = 'active' | 'trialing' | 'past_due' | 'canceled' | 'incomplete'
+export type SubscriptionStatus = 'active' | 'past_due' | 'canceled' | 'incomplete'
 
 export type SubscriptionPlan = 'free' | 'pro' | 'enterprise'
 

@@ -34,8 +34,7 @@
 | name | TEXT | 組織名 |
 | slug | TEXT | URL用の一意な識別子（例: acme-corp） |
 | subscription_plan | ENUM | サブスクリプションプラン（free/pro/enterprise） |
-| subscription_status | ENUM | ステータス（active/trialing/past_due/canceled） |
-| trial_ends_at | TIMESTAMP | トライアル期間終了日時 |
+| subscription_status | ENUM | ステータス（active/past_due/canceled/incomplete） |
 | subscription_ends_at | TIMESTAMP | サブスクリプション終了日時 |
 | chargebee_customer_id | TEXT | Chargebee顧客ID |
 | chargebee_subscription_id | TEXT | ChargebeeサブスクリプションID |
