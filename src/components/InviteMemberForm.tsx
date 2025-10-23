@@ -130,6 +130,7 @@ export default function InviteMemberForm({ organizationId, currentMemberCount, m
           </label>
           <input
             id="fullName"
+            name="fullName"
             type="text"
             required
             value={fullName}
@@ -145,6 +146,7 @@ export default function InviteMemberForm({ organizationId, currentMemberCount, m
           </label>
           <input
             id="email"
+            name="email"
             type="email"
             required
             value={email}
@@ -160,6 +162,7 @@ export default function InviteMemberForm({ organizationId, currentMemberCount, m
           </label>
           <select
             id="role"
+            name="role"
             value={role}
             onChange={(e) => setRole(e.target.value as OrganizationRole)}
             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"

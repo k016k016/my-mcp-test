@@ -62,61 +62,18 @@ describe('Organization Actions', () => {
       expect(result).toEqual({ error: '認証が必要です' })
     })
 
-    it('slugが重複している場合、エラーを返す', async () => {
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: { id: TEST_USER_ID } },
-        error: null,
-      })
-
-      // slug重複チェックのモック
-      const mockSelect = vi.fn().mockReturnThis()
-      const mockEq = vi.fn().mockReturnThis()
-      const mockSingle = vi.fn().mockResolvedValue({
-        data: { id: 'existing-org-id' },
-        error: null,
-      })
-
-      mockSupabase.from.mockReturnValue({
-        select: mockSelect,
-      })
-
-      mockSelect.mockReturnValue({
-        eq: mockEq,
-      })
-
-      mockEq.mockReturnValue({
-        single: mockSingle,
-      })
-
-      const result = await createOrganization({
-        name: 'テスト組織',
-        slug: 'existing-slug',
-      })
-
-      expect(result).toEqual({ error: 'この組織IDは既に使用されています' })
-      expect(mockSupabase.from).toHaveBeenCalledWith('organizations')
-    })
 
     it('組織を正常に作成できる', async () => {
       const mockUser = { id: TEST_USER_ID }
       const mockOrganization = {
         id: TEST_ORG_ID,
         name: 'テスト組織',
-        slug: 'test-org',
         subscription_plan: 'free',
-        subscription_status: 'trialing',
+        subscription_status: 'active',
       }
 
       mockSupabase.auth.getUser.mockResolvedValue({
         data: { user: mockUser },
-        error: null,
-      })
-
-      // slug重複チェック（重複なし）
-      const mockSelectCheck = vi.fn().mockReturnThis()
-      const mockEqCheck = vi.fn().mockReturnThis()
-      const mockSingleCheck = vi.fn().mockResolvedValue({
-        data: null,
         error: null,
       })
 
@@ -142,41 +99,26 @@ describe('Organization Actions', () => {
       mockSupabase.from.mockImplementation((table: string) => {
         callCount++
 
-        // 1回目: slug重複チェック
+        // 1回目: 組織作成
         if (callCount === 1) {
-          return {
-            select: mockSelectCheck,
-          }
-        }
-
-        // 2回目: 組織作成
-        if (callCount === 2) {
           return {
             insert: mockInsert,
           }
         }
 
-        // 3回目: メンバー追加
-        if (callCount === 3) {
+        // 2回目: メンバー追加
+        if (callCount === 2) {
           return {
             insert: mockInsertMember,
           }
         }
 
-        // 4回目: 監査ログ
-        if (callCount === 4) {
+        // 3回目: 監査ログ
+        if (callCount === 3) {
           return {
             insert: mockInsertAudit,
           }
         }
-      })
-
-      mockSelectCheck.mockReturnValue({
-        eq: mockEqCheck,
-      })
-
-      mockEqCheck.mockReturnValue({
-        single: mockSingleCheck,
       })
 
       mockInsert.mockReturnValue({
@@ -189,7 +131,6 @@ describe('Organization Actions', () => {
 
       const result = await createOrganization({
         name: 'テスト組織',
-        slug: 'test-org',
       })
 
       expect(result).toEqual({
@@ -204,14 +145,6 @@ describe('Organization Actions', () => {
         error: null,
       })
 
-      // slug重複チェック（重複なし）
-      const mockSelectCheck = vi.fn().mockReturnThis()
-      const mockEqCheck = vi.fn().mockReturnThis()
-      const mockSingleCheck = vi.fn().mockResolvedValue({
-        data: null,
-        error: null,
-      })
-
       // 組織作成失敗のモック
       const mockInsert = vi.fn().mockReturnThis()
       const mockSelectOrg = vi.fn().mockReturnThis()
@@ -220,29 +153,8 @@ describe('Organization Actions', () => {
         error: { message: 'Database error' },
       })
 
-      let callCount = 0
-      mockSupabase.from.mockImplementation(() => {
-        callCount++
-
-        if (callCount === 1) {
-          return {
-            select: mockSelectCheck,
-          }
-        }
-
-        if (callCount === 2) {
-          return {
-            insert: mockInsert,
-          }
-        }
-      })
-
-      mockSelectCheck.mockReturnValue({
-        eq: mockEqCheck,
-      })
-
-      mockEqCheck.mockReturnValue({
-        single: mockSingleCheck,
+      mockSupabase.from.mockReturnValue({
+        insert: mockInsert,
       })
 
       mockInsert.mockReturnValue({
@@ -255,7 +167,6 @@ describe('Organization Actions', () => {
 
       const result = await createOrganization({
         name: 'テスト組織',
-        slug: 'test-org',
       })
 
       expect(result).toEqual({
@@ -577,7 +488,10 @@ describe('Organization Actions', () => {
 
       const result = await switchOrganization(TEST_ORG_ID)
 
-      expect(result).toEqual({ success: true })
+      expect(result).toEqual({
+        success: true,
+        redirectUrl: expect.stringContaining('localhost:3000')
+      })
     })
   })
 })

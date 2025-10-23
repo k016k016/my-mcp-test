@@ -7,6 +7,15 @@ const mockSupabase = {
   auth: {
     getUser: vi.fn(),
   },
+  from: vi.fn(() => ({
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    is: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockResolvedValue({
+      data: [],
+      error: null,
+    }),
+  })),
 }
 
 // ドメイン設定のモック
@@ -95,7 +104,7 @@ describe('Middleware', () => {
   })
 
   describe('認証チェック - APPドメイン', () => {
-    it('未認証の場合、WWWログインページにリダイレクト', async () => {
+    it('未認証の場合でもミドルウェアではリダイレクトしない（ページ側で処理）', async () => {
       const { getDomainFromHost } = await import('@/lib/domains/config')
       vi.mocked(getDomainFromHost).mockReturnValue('app')
 
@@ -107,8 +116,9 @@ describe('Middleware', () => {
       const request = new NextRequest(new URL('http://app.localhost:3000/dashboard'))
       const response = await middleware(request)
 
-      expect(response.status).toBe(307) // Redirect
-      expect(response.headers.get('location')).toContain('/login')
+      // APPドメインは未認証でもミドルウェアではリダイレクトしない
+      expect(response.status).toBe(200)
+      expect(response.headers.get('x-domain')).toBe('app')
     })
 
     it('認証済みの場合、アクセスを許可', async () => {
@@ -139,7 +149,7 @@ describe('Middleware', () => {
   })
 
   describe('認証チェック - ADMINドメイン', () => {
-    it('未認証の場合、WWWログインページにリダイレクト', async () => {
+    it('未認証の場合でもミドルウェアではリダイレクトしない（ページ側で処理）', async () => {
       const { getDomainFromHost } = await import('@/lib/domains/config')
       vi.mocked(getDomainFromHost).mockReturnValue('admin')
 
@@ -151,41 +161,36 @@ describe('Middleware', () => {
       const request = new NextRequest(new URL('http://admin.localhost:3000/settings'))
       const response = await middleware(request)
 
-      expect(response.status).toBe(307)
-      expect(response.headers.get('location')).toContain('/login')
+      // ADMINドメインは未認証でもミドルウェアではリダイレクトしない
+      expect(response.status).toBe(200)
+      expect(response.headers.get('x-domain')).toBe('admin')
     })
 
-    it('管理者権限がない場合、APP画面にリダイレクト', async () => {
+    it('権限チェックはページ側で実施（ミドルウェアでは行わない）', async () => {
       const { getDomainFromHost } = await import('@/lib/domains/config')
-      const { hasAdminAccess } = await import('@/lib/auth/permissions')
 
       vi.mocked(getDomainFromHost).mockReturnValue('admin')
       mockSupabase.auth.getUser.mockResolvedValue({
         data: { user: { id: 'user-1' } },
         error: null,
       })
-      vi.mocked(hasAdminAccess).mockResolvedValue(false)
 
       const request = new NextRequest(new URL('http://admin.localhost:3000/settings'))
       const response = await middleware(request)
 
-      expect(response.status).toBe(307)
-      expect(response.headers.get('location')).toContain('app.localhost:3000')
-      // URLエンコードされた日本語をデコードして比較
-      const location = decodeURIComponent(response.headers.get('location') || '')
-      expect(location).toContain('管理者権限がありません')
+      // ミドルウェアでは権限チェックせずアクセスを許可（ページ側で処理）
+      expect(response.status).toBe(200)
+      expect(response.headers.get('x-domain')).toBe('admin')
     })
 
-    it('管理者権限がある場合、アクセスを許可', async () => {
+    it('認証済みユーザーのアクセスを許可', async () => {
       const { getDomainFromHost } = await import('@/lib/domains/config')
-      const { hasAdminAccess } = await import('@/lib/auth/permissions')
 
       vi.mocked(getDomainFromHost).mockReturnValue('admin')
       mockSupabase.auth.getUser.mockResolvedValue({
         data: { user: { id: 'user-1' } },
         error: null,
       })
-      vi.mocked(hasAdminAccess).mockResolvedValue(true)
 
       const request = new NextRequest(new URL('http://admin.localhost:3000/settings'))
       const response = await middleware(request)

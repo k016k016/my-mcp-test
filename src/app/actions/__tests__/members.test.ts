@@ -46,7 +46,7 @@ describe('Members Actions', () => {
         error: new Error('Not authenticated'),
       })
 
-      const result = await inviteMember('00000000-0000-4000-8000-000000000001', 'test@example.com', 'member')
+      const result = await inviteMember('00000000-0000-4000-8000-000000000001', 'test@example.com', 'Test User', 'member')
 
       expect(result).toEqual({ error: '認証が必要です' })
     })
@@ -60,6 +60,7 @@ describe('Members Actions', () => {
       const mockSelect = vi.fn().mockReturnThis()
       const mockEq1 = vi.fn().mockReturnThis()
       const mockEq2 = vi.fn().mockReturnThis()
+      const mockIs = vi.fn().mockReturnThis()
       const mockSingle = vi.fn().mockResolvedValue({
         data: { role: 'member' }, // memberは招待権限なし
         error: null,
@@ -78,10 +79,14 @@ describe('Members Actions', () => {
       })
 
       mockEq2.mockReturnValue({
+        is: mockIs,
+      })
+
+      mockIs.mockReturnValue({
         single: mockSingle,
       })
 
-      const result = await inviteMember('00000000-0000-4000-8000-000000000001', 'test@example.com', 'member')
+      const result = await inviteMember('00000000-0000-4000-8000-000000000001', 'test@example.com', 'Test User', 'member')
 
       expect(result).toEqual({ error: 'メンバーを招待する権限がありません' })
     })
@@ -106,6 +111,7 @@ describe('Members Actions', () => {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
+            is: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({
               data: { role: 'admin' },
               error: null,
@@ -118,6 +124,7 @@ describe('Members Actions', () => {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
+            is: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({
               data: { id: 'invitation-1' }, // 既に招待あり
               error: null,
@@ -126,7 +133,7 @@ describe('Members Actions', () => {
         }
       })
 
-      const result = await inviteMember('00000000-0000-4000-8000-000000000001', 'test@example.com', 'member')
+      const result = await inviteMember('00000000-0000-4000-8000-000000000001', 'test@example.com', 'Test User', 'member')
 
       expect(result).toEqual({ error: 'このメールアドレスには既に招待を送信しています' })
     })
@@ -207,6 +214,7 @@ describe('Members Actions', () => {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
+            is: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({
               data: {
                 id: 'invitation-1',
@@ -225,6 +233,7 @@ describe('Members Actions', () => {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
+            is: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({
               data: { email: 'different@example.com' }, // 異なるメール
               error: null,
@@ -256,6 +265,7 @@ describe('Members Actions', () => {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
+            is: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({
               data: {
                 id: 'invitation-1',
@@ -273,6 +283,7 @@ describe('Members Actions', () => {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
+            is: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({
               data: { email: 'test@example.com' },
               error: null,
@@ -284,6 +295,7 @@ describe('Members Actions', () => {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
+            is: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({
               data: { id: '00000000-0000-4000-8000-000000000004' }, // 既にメンバー
               error: null,
@@ -319,6 +331,7 @@ describe('Members Actions', () => {
       mockSupabase.from.mockReturnValue({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({
           data: { role: 'member' }, // memberは権限なし
           error: null,
@@ -345,6 +358,7 @@ describe('Members Actions', () => {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
+            is: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({
               data: { role: 'admin' },
               error: null,
@@ -357,6 +371,7 @@ describe('Members Actions', () => {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
+            is: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({
               data: null,
               error: null,
@@ -384,6 +399,7 @@ describe('Members Actions', () => {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
+            is: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({
               data: { role: 'admin' }, // adminはowner指定不可
               error: null,
@@ -395,6 +411,7 @@ describe('Members Actions', () => {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
+            is: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({
               data: { role: 'member', user_id: '00000000-0000-4000-8000-000000000003' },
               error: null,
@@ -422,6 +439,7 @@ describe('Members Actions', () => {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
+            is: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({
               data: { role: 'owner' },
               error: null,
@@ -433,6 +451,7 @@ describe('Members Actions', () => {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
+            is: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({
               data: { role: 'owner', user_id: '00000000-0000-4000-8000-000000000002' }, // 自分自身
               error: null,
@@ -468,6 +487,7 @@ describe('Members Actions', () => {
       mockSupabase.from.mockReturnValue({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({
           data: null,
           error: null,
@@ -488,6 +508,7 @@ describe('Members Actions', () => {
       mockSupabase.from.mockReturnValue({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({
           data: { role: 'owner', user_id: '00000000-0000-4000-8000-000000000002' }, // 自分自身がowner
           error: null,
@@ -516,6 +537,7 @@ describe('Members Actions', () => {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
+            is: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({
               data: { role: 'member', user_id: '00000000-0000-4000-8000-000000000003' }, // 他人
               error: null,
@@ -528,6 +550,7 @@ describe('Members Actions', () => {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
+            is: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({
               data: { role: 'member' }, // memberは削除権限なし
               error: null,
@@ -555,6 +578,7 @@ describe('Members Actions', () => {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
+            is: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({
               data: { role: 'owner', user_id: '00000000-0000-4000-8000-000000000003' }, // 他人のowner
               error: null,
@@ -566,6 +590,7 @@ describe('Members Actions', () => {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
+            is: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({
               data: { role: 'admin' },
               error: null,

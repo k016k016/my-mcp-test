@@ -91,8 +91,9 @@ describe('Organization Current', () => {
         organizationId,
         expect.objectContaining({
           httpOnly: true,
-          sameSite: 'lax',
+          sameSite: 'strict',
           maxAge: 60 * 60 * 24 * 30, // 30日間
+          path: '/',
         })
       )
     })
@@ -143,14 +144,14 @@ describe('Organization Current', () => {
       )
     })
 
-    it('sameSiteがlaxに設定される', async () => {
+    it('sameSiteがstrictに設定される', async () => {
       await setCurrentOrganizationId('org-samesite')
 
       expect(mockCookieStore.set).toHaveBeenCalledWith(
         'current_organization_id',
         'org-samesite',
         expect.objectContaining({
-          sameSite: 'lax',
+          sameSite: 'strict',
         })
       )
     })
@@ -290,8 +291,10 @@ describe('Organization Current', () => {
       expect(mockCookieStore.set).toHaveBeenCalledWith('current_organization_id', 'org-dev', {
         httpOnly: true,
         secure: false,
-        sameSite: 'lax',
+        sameSite: 'strict',
         maxAge: 2592000, // 60 * 60 * 24 * 30
+        path: '/',
+        domain: '.local.test',
       })
 
       process.env.NODE_ENV = originalEnv
@@ -306,8 +309,9 @@ describe('Organization Current', () => {
       expect(mockCookieStore.set).toHaveBeenCalledWith('current_organization_id', 'org-prod', {
         httpOnly: true,
         secure: true,
-        sameSite: 'lax',
+        sameSite: 'strict',
         maxAge: 2592000,
+        path: '/',
       })
 
       process.env.NODE_ENV = originalEnv

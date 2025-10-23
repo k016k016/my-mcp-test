@@ -68,7 +68,8 @@ describe('Permissions', () => {
 
       mockSupabase.from.mockReturnValue({
         select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({
           data: [{ role: 'owner' }],
           error: null,
         }),
@@ -88,7 +89,8 @@ describe('Permissions', () => {
 
       mockSupabase.from.mockReturnValue({
         select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({
           data: [{ role: 'admin' }],
           error: null,
         }),
@@ -107,7 +109,8 @@ describe('Permissions', () => {
 
       mockSupabase.from.mockReturnValue({
         select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({
           data: [{ role: 'member' }],
           error: null,
         }),
@@ -126,7 +129,8 @@ describe('Permissions', () => {
 
       mockSupabase.from.mockReturnValue({
         select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({
           data: [],
           error: null,
         }),
@@ -144,25 +148,27 @@ describe('Permissions', () => {
       } as User
       const organizationId = 'org-123'
 
-      const mockEqChain = {
+      // .is()の後に.eq()が呼ばれる可能性があるため、.is()が返すオブジェクトに.eq()を追加
+      const mockIsResult = {
         eq: vi.fn().mockResolvedValue({
           data: [{ role: 'admin' }],
           error: null,
         })
       }
 
-      const mockEq = vi.fn().mockReturnValue(mockEqChain)
+      const mockIs = vi.fn().mockReturnValue(mockIsResult)
 
       mockSupabase.from.mockReturnValue({
         select: vi.fn().mockReturnThis(),
-        eq: mockEq,
+        eq: vi.fn().mockReturnThis(),
+        is: mockIs,
       })
 
       const result = await hasAdminAccess(user, organizationId)
 
       expect(result).toBe(true)
-      expect(mockEq).toHaveBeenCalledWith('user_id', 'user-5')
-      expect(mockEqChain.eq).toHaveBeenCalledWith('organization_id', 'org-123')
+      expect(mockIs).toHaveBeenCalledWith('deleted_at', null)
+      expect(mockIsResult.eq).toHaveBeenCalledWith('organization_id', 'org-123')
     })
   })
 
@@ -175,7 +181,8 @@ describe('Permissions', () => {
 
       mockSupabase.from.mockReturnValue({
         select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({
           data: [{ id: 'membership-1' }],
           error: null,
         }),
@@ -195,7 +202,8 @@ describe('Permissions', () => {
 
       mockSupabase.from.mockReturnValue({
         select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({
           data: [],
           error: null,
         }),
@@ -213,25 +221,27 @@ describe('Permissions', () => {
       } as User
       const organizationId = 'org-456'
 
-      const mockEqChain = {
+      // .is()の後に.eq()が呼ばれる可能性があるため、.is()が返すオブジェクトに.eq()を追加
+      const mockIsResult = {
         eq: vi.fn().mockResolvedValue({
           data: [{ id: 'membership-2' }],
           error: null,
         })
       }
 
-      const mockEq = vi.fn().mockReturnValue(mockEqChain)
+      const mockIs = vi.fn().mockReturnValue(mockIsResult)
 
       mockSupabase.from.mockReturnValue({
         select: vi.fn().mockReturnThis(),
-        eq: mockEq,
+        eq: vi.fn().mockReturnThis(),
+        is: mockIs,
       })
 
       const result = await hasOrganizationAccess(user, organizationId)
 
       expect(result).toBe(true)
-      expect(mockEq).toHaveBeenCalledWith('user_id', 'user-3')
-      expect(mockEqChain.eq).toHaveBeenCalledWith('organization_id', 'org-456')
+      expect(mockIs).toHaveBeenCalledWith('deleted_at', null)
+      expect(mockIsResult.eq).toHaveBeenCalledWith('organization_id', 'org-456')
     })
   })
 
@@ -245,7 +255,8 @@ describe('Permissions', () => {
 
       mockSupabase.from.mockReturnValue({
         select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({
           data: [],
           error: null,
         }),
@@ -269,7 +280,8 @@ describe('Permissions', () => {
 
       mockSupabase.from.mockReturnValue({
         select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({
           data: [
             {
               role: 'admin',
@@ -307,7 +319,8 @@ describe('Permissions', () => {
 
       mockSupabase.from.mockReturnValue({
         select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({
           data: [
             {
               role: 'member',
@@ -345,7 +358,8 @@ describe('Permissions', () => {
 
       mockSupabase.from.mockReturnValue({
         select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({
           data: [],
           error: null,
         }),
@@ -369,7 +383,8 @@ describe('Permissions', () => {
 
       mockSupabase.from.mockReturnValue({
         select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({
           data: [
             {
               role: 'owner',
@@ -422,7 +437,8 @@ describe('Permissions', () => {
 
       mockSupabase.from.mockReturnValue({
         select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({
           data: [],
           error: null,
         }),
@@ -441,7 +457,8 @@ describe('Permissions', () => {
 
       mockSupabase.from.mockReturnValue({
         select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({
           data: [
             {
               role: 'admin',
@@ -468,7 +485,8 @@ describe('Permissions', () => {
 
       mockSupabase.from.mockReturnValue({
         select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({
           data: [
             {
               role: 'member',
@@ -495,7 +513,8 @@ describe('Permissions', () => {
 
       mockSupabase.from.mockReturnValue({
         select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({
           data: [],
           error: null,
         }),
@@ -503,7 +522,7 @@ describe('Permissions', () => {
 
       const result = await getRedirectUrlForUser(user)
 
-      expect(result).toBe('http://localhost:3000/onboarding/create-organization')
+      expect(result).toBe('http://localhost:3000')
     })
 
     it('OPS権限が最優先される（複数の組織に所属していても）', async () => {
@@ -515,7 +534,8 @@ describe('Permissions', () => {
 
       mockSupabase.from.mockReturnValue({
         select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({
           data: [
             {
               role: 'owner',

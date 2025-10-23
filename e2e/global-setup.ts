@@ -1,11 +1,16 @@
 // E2Eテストのグローバルセットアップ
 import { config } from 'dotenv'
+import { chromium, FullConfig } from '@playwright/test'
+import path from 'path'
 import { cleanupTestData, createTestUser, createTestOrganization, createAdminClient } from './helpers/test-setup'
 
 // .env.localを読み込む
 config({ path: '.env.local' })
 
-async function globalSetup() {
+// storageStateの保存先ディレクトリ
+const authDir = path.join(__dirname, '../.auth')
+
+async function globalSetup(config: FullConfig) {
   console.log('🚀 E2Eテストのグローバルセットアップ開始')
 
   try {
@@ -97,10 +102,71 @@ async function globalSetup() {
       .eq('user_id', multiOrgUser.id)
       .eq('organization_id', adminOrganization.id)
 
+    // 3. storageStateを生成（ログイン状態を保存）
+    console.log('🔐 storageStateを生成中...')
+
+    // Chromiumブラウザを起動（storageState生成用）
+    const browser = await chromium.launch()
+
+    // 各ロールのstorageStateを生成
+    await generateStorageState(browser, 'member@example.com', TEST_PASSWORD, 'member')
+    await generateStorageState(browser, 'admin@example.com', TEST_PASSWORD, 'admin')
+    await generateStorageState(browser, 'owner@example.com', TEST_PASSWORD, 'owner')
+    await generateStorageState(browser, 'ops@example.com', TEST_PASSWORD, 'ops')
+
+    await browser.close()
+
     console.log('✅ グローバルセットアップ完了')
   } catch (error) {
     console.error('❌ グローバルセットアップ失敗:', error)
     throw error
+  }
+}
+
+/**
+ * ログインしてstorageStateを生成
+ */
+async function generateStorageState(
+  browser: any,
+  email: string,
+  password: string,
+  roleName: string
+) {
+  const context = await browser.newContext()
+  const page = await context.newPage()
+
+  try {
+    // WWWドメインのログインページにアクセス
+    const loginUrl = roleName === 'ops'
+      ? 'http://ops.local.test:3000/login'
+      : 'http://www.local.test:3000/login'
+
+    await page.goto(loginUrl, { waitUntil: 'networkidle' })
+
+    // ログインフォームに入力
+    await page.fill('input[name="email"]', email)
+    await page.fill('input[name="password"]', password)
+    await page.click('button[type="submit"]:has-text("ログイン")')
+
+    // ログイン後のリダイレクトを待機
+    await page.waitForURL((url) => {
+      const urlStr = url.toString()
+      return !urlStr.includes('www.local.test') && !urlStr.includes('ops.local.test/login')
+    }, { timeout: 30000 })
+
+    // ページが完全にロードされるまで待機
+    await page.waitForLoadState('networkidle')
+
+    // storageStateを保存
+    const storagePath = path.join(authDir, `${roleName}.json`)
+    await context.storageState({ path: storagePath })
+
+    console.log(`   ✅ ${roleName} storageState保存: ${storagePath}`)
+  } catch (error) {
+    console.error(`   ❌ ${roleName} storageState生成失敗:`, error)
+    throw error
+  } finally {
+    await context.close()
   }
 }
 

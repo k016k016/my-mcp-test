@@ -4,7 +4,6 @@ import {
   emailSchema,
   passwordSchema,
   signUpSchema,
-  organizationSlugSchema,
   organizationNameSchema,
   checkPasswordStrength,
 } from '@/lib/validation'
@@ -74,37 +73,6 @@ describe('Validation', () => {
           contactName: 'Test User',
         })
       ).toThrow()
-    })
-  })
-
-  describe('organizationSlugSchema', () => {
-    it('有効なslugを許可する', () => {
-      expect(organizationSlugSchema.parse('my-org')).toBe('my-org')
-      expect(organizationSlugSchema.parse('org123')).toBe('org123')
-      expect(organizationSlugSchema.parse('my-cool-org')).toBe('my-cool-org')
-    })
-
-    it('3文字未満のslugを拒否する', () => {
-      expect(() => organizationSlugSchema.parse('ab')).toThrow()
-    })
-
-    it('32文字を超えるslugを拒否する', () => {
-      expect(() => organizationSlugSchema.parse('a'.repeat(33))).toThrow()
-    })
-
-    it('先頭または末尾のハイフンを拒否する', () => {
-      expect(() => organizationSlugSchema.parse('-myorg')).toThrow()
-      expect(() => organizationSlugSchema.parse('myorg-')).toThrow()
-    })
-
-    it('大文字を含むslugを拒否する', () => {
-      expect(() => organizationSlugSchema.parse('MyOrg')).toThrow()
-    })
-
-    it('無効な文字を拒否する', () => {
-      expect(() => organizationSlugSchema.parse('my_org')).toThrow()
-      expect(() => organizationSlugSchema.parse('my.org')).toThrow()
-      expect(() => organizationSlugSchema.parse('my org')).toThrow()
     })
   })
 

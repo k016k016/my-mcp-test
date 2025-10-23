@@ -25,29 +25,94 @@ export default defineConfig({
   },
 
   projects: [
+    // Member権限のテスト（APPドメイン用）
     {
-      name: 'chromium',
+      name: 'member-chromium',
+      testMatch: /app-domain\.spec\.ts/,
       use: {
         ...devices['Desktop Chrome'],
-        // Chromiumは高速なので標準タイムアウト
+        storageState: '.auth/member.json',
+        navigationTimeout: 30000,
+        actionTimeout: 10000,
+      },
+    },
+    {
+      name: 'member-firefox',
+      testMatch: /app-domain\.spec\.ts/,
+      use: {
+        ...devices['Desktop Firefox'],
+        storageState: '.auth/member.json',
+        navigationTimeout: 45000,
+        actionTimeout: 15000,
+      },
+    },
+    {
+      name: 'member-webkit',
+      testMatch: /app-domain\.spec\.ts/,
+      use: {
+        ...devices['Desktop Safari'],
+        storageState: '.auth/member.json',
+        navigationTimeout: 60000,
+        actionTimeout: 20000,
+      },
+    },
+
+    // Admin権限のテスト（ADMINドメイン用）
+    {
+      name: 'admin-chromium',
+      testMatch: /admin-domain\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: '.auth/admin.json',
+        navigationTimeout: 30000,
+        actionTimeout: 10000,
+      },
+    },
+    {
+      name: 'admin-firefox',
+      testMatch: /admin-domain\.spec\.ts/,
+      use: {
+        ...devices['Desktop Firefox'],
+        storageState: '.auth/admin.json',
+        navigationTimeout: 45000,
+        actionTimeout: 15000,
+      },
+    },
+    {
+      name: 'admin-webkit',
+      testMatch: /admin-domain\.spec\.ts/,
+      use: {
+        ...devices['Desktop Safari'],
+        storageState: '.auth/admin.json',
+        navigationTimeout: 60000,
+        actionTimeout: 20000,
+      },
+    },
+
+    // その他のテスト（storageState不要）
+    {
+      name: 'chromium',
+      testIgnore: [/app-domain\.spec\.ts/, /admin-domain\.spec\.ts/],
+      use: {
+        ...devices['Desktop Chrome'],
         navigationTimeout: 30000,
         actionTimeout: 10000,
       },
     },
     {
       name: 'firefox',
+      testIgnore: [/app-domain\.spec\.ts/, /admin-domain\.spec\.ts/],
       use: {
         ...devices['Desktop Firefox'],
-        // Firefoxは若干遅いのでタイムアウトを延長
         navigationTimeout: 45000,
         actionTimeout: 15000,
       },
     },
     {
       name: 'webkit',
+      testIgnore: [/app-domain\.spec\.ts/, /admin-domain\.spec\.ts/],
       use: {
         ...devices['Desktop Safari'],
-        // WebKitは最も遅いのでタイムアウトを最長に
         navigationTimeout: 60000,
         actionTimeout: 20000,
       },

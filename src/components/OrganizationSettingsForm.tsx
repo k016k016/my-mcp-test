@@ -23,10 +23,8 @@ export default function OrganizationSettingsForm({ organization }: OrganizationS
     setSuccess(false)
     setIsLoading(true)
 
-    const formData = new FormData()
-    formData.append('name', name)
-
-    const result = await updateOrganization(organization.id, formData)
+    // updateOrganizationはオブジェクトを期待している（FormDataではない）
+    const result = await updateOrganization(organization.id, { name })
 
     if (result.error) {
       setError(result.error)
@@ -34,10 +32,14 @@ export default function OrganizationSettingsForm({ organization }: OrganizationS
     } else {
       setSuccess(true)
       setIsLoading(false)
+      // 成功メッセージを3秒間表示してから自動的に消す
       setTimeout(() => {
         setSuccess(false)
+      }, 3000)
+      // ページをリフレッシュ（成功メッセージが消えた後）
+      setTimeout(() => {
         router.refresh()
-      }, 2000)
+      }, 3000)
     }
   }
 
@@ -69,6 +71,7 @@ export default function OrganizationSettingsForm({ organization }: OrganizationS
           </label>
           <input
             id="name"
+            name="name"
             type="text"
             required
             value={name}
