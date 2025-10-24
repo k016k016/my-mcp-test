@@ -12,6 +12,7 @@
 | `CROSS_PLATFORM_DEVELOPMENT.md` | MacとWindows間での開発方法 |
 | `DEVELOPMENT_WORKFLOW.md` | 開発ワークフローの手順 |
 | `E2E_TESTING_GUIDE.md` | E2Eテストの実行方法 |
+| `E2E_BEST_PRACTICES.md` | E2Eテストのベストプラクティス |
 | `ENVIRONMENT_ACCOUNTS_STRATEGY.md` | 環境とアカウントの戦略 |
 | `ENVIRONMENT_SETUP.md` | 環境設定ガイド（開発/ステージング/本番） |
 | `SUPABASE_DATA_MANAGEMENT.md` | Supabaseデータ管理ツール |
@@ -58,6 +59,7 @@
 | ファイル | 説明 |
 |---------|------|
 | `PROJECT_PROGRESS.md` | プロジェクト進捗と完成機能一覧 |
+| `IMPLEMENTATION_LOG.md` | 実装内容の詳細ログ（時系列） |
 
 ## 📋 主要なドキュメント
 
@@ -69,6 +71,7 @@
 ### 開発・運用
 - **`guides/DEVELOPMENT_WORKFLOW.md`** - 開発ワークフロー
 - **`guides/E2E_TESTING_GUIDE.md`** - E2Eテスト実行
+- **`guides/E2E_BEST_PRACTICES.md`** - E2Eテストのベストプラクティス
 - **`guides/SUPABASE_DATA_MANAGEMENT.md`** - データ管理ツール
 
 ### 仕様・設計
@@ -77,9 +80,11 @@
 - **`specifications/MULTI_DOMAIN_SETUP.md`** - マルチドメイン設定
 
 ### 進捗・管理
-- **`project/PROJECT_PROGRESS.md`** - プロジェクト進捗
-- **`IMPLEMENTATION_LOG.md`** - 実装ログ
-- **`PROGRESS_2025-01-17.md`** - 進捗レポート
+- **`project/PROJECT_PROGRESS.md`** - プロジェクト進捗と完成機能一覧
+- **`project/IMPLEMENTATION_LOG.md`** - 実装内容の詳細ログ（時系列）
+
+### セキュリティ
+- **`SECURITY.md`** - セキュリティガイドラインとベストプラクティス
 
 ## 🚀 クイックスタート
 
@@ -90,22 +95,23 @@
 
 ### 開発開始
 1. `guides/DEVELOPMENT_WORKFLOW.md` で開発フローを確認
-2. `guides/E2E_TESTING_GUIDE.md` でテスト環境を構築
+2. `guides/E2E_TESTING_GUIDE.md` と `guides/E2E_BEST_PRACTICES.md` でテスト環境を構築
 3. `specifications/DATABASE_SCHEMA.md` でデータベース設計を理解
 
 ### 新機能開発
 1. `proposals/` フォルダで新機能の提案を検討
 2. `specifications/` フォルダで仕様を詳細化
 3. `project/PROJECT_PROGRESS.md` で進捗を管理
+4. `project/IMPLEMENTATION_LOG.md` に実装内容を記録
 
 ## 📝 ドキュメントの更新
 
 - **新機能の提案**: `proposals/` フォルダに追加
 - **仕様の確定**: `specifications/` フォルダに移動
 - **進捗の更新**: `project/PROJECT_PROGRESS.md` を更新
-- **実装ログ**: `IMPLEMENTATION_LOG.md` に記録
+- **実装ログ**: `project/IMPLEMENTATION_LOG.md` に記録
 
 ---
 
-**最終更新**: 2025-01-17
+**最終更新**: 2025-10-24
 **メンテナンス**: 構成変更時はこのファイルを更新してください

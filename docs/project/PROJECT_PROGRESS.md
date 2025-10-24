@@ -1,6 +1,6 @@
 # プロジェクト進捗状況
 
-最終更新: 2025-10-15
+最終更新: 2025-10-24
 
 ## 📋 概要
 
@@ -11,8 +11,12 @@ Next.js 15 + Supabase + マルチドメイン構成。
 
 ### コア機能
 - **認証**: サインアップ、ログイン、パスワードリセット、OAuth、メール確認
-- **組織管理**: CRUD、切り替え
-- **メンバー管理**: 招待、ロール変更（owner/admin/member）、削除
+  - サインアップ時に自動的に組織作成（ownerロール付与）
+  - 権限に応じた自動リダイレクト（OPS/ADMIN/APP）
+- **組織管理**: CRUD、切り替え、複数組織対応
+- **メンバー管理**: 招待、ロール変更（owner/admin/member）、論理削除
+  - ローカル環境: 直接ユーザー作成（パスワード固定）
+  - 本番環境: メール招待経由
 - **サブスクリプション**: プラン表示、使用量可視化
 - **設定画面**: プロフィール、通知、組織、メンバー、サブスクリプション
 
@@ -83,29 +87,42 @@ docs/                  # ドキュメント（構成は docs/README.md を参照
 - **開発ワークフロー**: `docs/DEVELOPMENT_WORKFLOW.md`
 - **データベース**: `docs/DATABASE_SCHEMA.md`
 
-## 📅 最新更新（2025-10-15）
+## 📅 最新更新（2025-10-24）
 
-### Vercel自動デプロイ設定
-- develop → Preview環境、main → Production環境
-- GitHub-Vercel連携の修正
-- カスタムドメイン設定（Preview: cocktailorder.com）
+### 認証フロー完全実装
+- サインアップ時の自動組織作成とowner権限付与
+- ログイン後の権限ベースリダイレクト（OPS/ADMIN/APP）
+- 現在の組織IDをCookieに自動設定
 
-### Cookie共有実装
-- サブドメイン間で認証Cookie共有（`.localhost`, `.cocktailorder.com`）
-- 修正: `src/lib/supabase/{server,middleware,client}.ts`
+### メンバー管理機能完成
+- メンバー招待（ロール指定可能: owner/admin/member）
+- メンバーのロール変更機能
+- メンバーの論理削除機能（deleted_at使用）
+- 環境別処理（ローカル: 直接作成、本番: メール招待）
 
-### E2Eテスト環境整備
-- localhost/Preview環境対応（環境変数でbaseURL切り替え）
-- Cookie共有テスト追加
-- テストファイル: `e2e/{localhost,vercel-preview}.spec.ts`
+### E2Eテストのベストプラクティス適用
+- ローディングインジケーターのライフサイクル検証
+- E2E遅延フラグ（`__E2E_FORCE_PENDING_MS__`）のサポート
+- APP domainのプロフィール更新・パスワード変更テスト改善
 
-### Supabaseデータ管理ツール
-- データクリアスクリプト: `supabase/scripts/clear-all-data.sql`
-- コマンド: `npm run supabase:clear`
-- ドキュメント: `docs/SUPABASE_DATA_MANAGEMENT.md`
+### ドキュメント整備
+- E2Eベストプラクティスガイド追加
+- セキュリティドキュメント追加
+- 各種提案書追加（Wiki、国際化、アクセシビリティなど）
 
-## 🎯 次のステップ
+## 🎯 次のステップ候補
 
-1.サインアップの流れを完成させる（権限はadmin）
-2.adminでユーザを追加できる。権限も設定可能
-3.adminでユーザを削除・変更できる。（論理削除）
+### 機能拡張
+1. **Wiki機能** - 組織内のナレッジ共有（提案書: `docs/proposals/WIKI_FEATURE.md`）
+2. **通知設定** - メール・Slack通知の詳細設定（提案書: `docs/proposals/NOTIFICATION_SETTINGS.md`）
+3. **国際化（i18n）** - 多言語対応（提案書: `docs/proposals/INTERNATIONALIZATION.md`）
+4. **アクセシビリティ** - WCAG準拠（提案書: `docs/proposals/ACCESSIBILITY.md`）
+
+### パフォーマンス・UX改善
+5. **レスポンシブデザイン強化** - モバイル対応の改善（提案書: `docs/proposals/RESPONSIVE_DESIGN.md`）
+6. **パフォーマンス最適化** - 読み込み速度改善（提案書: `docs/proposals/PERFORMANCE_OPTIMIZATION.md`）
+
+### 運用・保守
+7. **監査ログビューア** - OPSドメインでの監査ログ閲覧機能
+8. **使用量ダッシュボード** - 組織ごとの使用量可視化強化
+9. **E2Eテストカバレッジ拡大** - 全ドメイン・全機能のテストカバー
