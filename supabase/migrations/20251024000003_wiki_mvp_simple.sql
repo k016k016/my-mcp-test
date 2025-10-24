@@ -1,4 +1,4 @@
--- Wiki MVP用のテーブル（最小限）
+-- Wiki MVP用のテーブル（最小限）- simple設定版
 CREATE TABLE wiki_pages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,

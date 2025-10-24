@@ -101,6 +101,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                   ダッシュボード
                 </a>
                 <a
+                  href="/wiki"
+                  className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                >
+                  Wiki
+                </a>
+                <a
                   href="/settings/profile"
                   className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                 >

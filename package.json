@@ -39,6 +39,7 @@
     "pino-logflare": "^0.5.2",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "react-markdown": "^10.1.0",
     "resend": "^6.1.2",
     "zod": "^4.1.12"
   },

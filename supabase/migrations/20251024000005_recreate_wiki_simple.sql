@@ -1,4 +1,4 @@
--- Wiki MVP用のテーブル（最小限）
+-- Wiki MVP用のテーブル（simple設定版）を再作成
 CREATE TABLE wiki_pages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
@@ -32,7 +32,7 @@ CREATE INDEX idx_wiki_pages_org_id ON wiki_pages(organization_id);
 CREATE INDEX idx_wiki_pages_slug ON wiki_pages(organization_id, slug);
 CREATE INDEX idx_wiki_pages_search_vector ON wiki_pages USING gin(search_vector);
 
--- 検索ベクターを自動更新するトリガー
+-- 検索ベクターを自動更新するトリガー（simple設定）
 CREATE OR REPLACE FUNCTION update_wiki_page_search_vector()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -83,7 +83,7 @@ CREATE POLICY "Admins can delete any wiki page" ON wiki_pages
         )
     );
 
--- 全文検索用のRPC関数
+-- 全文検索用のRPC関数（simple設定）
 CREATE OR REPLACE FUNCTION search_wiki_pages(
     org_id UUID,
     search_query TEXT,
