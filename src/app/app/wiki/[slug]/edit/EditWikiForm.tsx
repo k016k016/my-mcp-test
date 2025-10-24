@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { updateWikiPage } from '@/app/actions/wiki'
 import type { WikiPage } from '@/types/database'
+import WikiEditor from '@/components/WikiEditor'
 
 interface Props {
   page: WikiPage
@@ -95,17 +96,10 @@ export default function EditWikiForm({ page }: Props) {
           <label htmlFor="content" className="block text-sm font-medium mb-2">
             内容（Markdown）
           </label>
-          <textarea
-            id="content"
-            name="content"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            required
-            rows={15}
-            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-            placeholder="# 見出し&#10;&#10;本文をMarkdownで記述してください。"
-          />
-          <p className="mt-1 text-sm text-gray-500">Markdown形式で記述できます</p>
+          <WikiEditor value={content} onChange={setContent} />
+          <p className="mt-1 text-sm text-gray-500">
+            Markdown形式で記述できます。エディタとプレビューを切り替えて確認できます。
+          </p>
         </div>
 
         <div className="flex gap-4">

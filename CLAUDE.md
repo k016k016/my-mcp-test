@@ -5,6 +5,41 @@
 
 ## 重要なルール
 
+### テスト駆動開発（TDD）
+
+**このプロジェクトでは、新機能の実装時にテスト駆動開発（TDD）を採用します**
+
+TDDサイクル：
+1. **Red（失敗）**: 先にテストを書き、実装がないため失敗することを確認
+2. **Green（成功）**: 最小限の実装でテストを通す
+3. **Refactor（改善）**: テストが通る状態を保ちながらコードを改善
+
+**実装手順**:
+```bash
+# 1. テストファイルを先に作成
+src/components/__tests__/NewComponent.test.tsx
+e2e/new-feature.spec.ts
+
+# 2. テストを実行して失敗を確認（Red）
+npm run test src/components/__tests__/NewComponent.test.tsx
+npm run test:e2e e2e/new-feature.spec.ts
+
+# 3. 実装を行う
+src/components/NewComponent.tsx
+
+# 4. テストを実行して成功を確認（Green）
+npm run test
+npm run test:e2e
+
+# 5. 必要に応じてリファクタリング
+```
+
+**TDDの利点**:
+- 仕様が明確になる
+- リグレッション（機能の退行）を防ぐ
+- リファクタリングが安全に行える
+- テストカバレッジが自然と高くなる
+
 ### 開発サーバーのポート
 
 **開発サーバーは必ずポート3000で起動すること**
