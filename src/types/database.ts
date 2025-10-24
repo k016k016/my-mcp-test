@@ -247,3 +247,51 @@ export interface OrganizationWithUsage extends Organization {
   limits: OrganizationLimits
   features: PlanFeatures
 }
+
+// ============================================================================
+// Wiki関連型
+// ============================================================================
+
+export interface WikiPage {
+  id: string
+  organization_id: string
+  title: string
+  slug: string
+  content: string
+  is_published: boolean
+  view_count: number
+  created_by: string
+  updated_by: string
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateWikiPageData {
+  title: string
+  slug: string
+  content: string
+}
+
+export interface UpdateWikiPageData {
+  title?: string
+  slug?: string
+  content?: string
+}
+
+export interface WikiPageListItem {
+  id: string
+  title: string
+  slug: string
+  view_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface WikiSearchResult {
+  id: string
+  title: string
+  slug: string
+  rank: number
+  created_at: string
+  updated_at: string
+}
