@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getWikiPage } from '@/app/actions/wiki'
 import ReactMarkdown from 'react-markdown'
+import DeleteWikiButton from './DeleteWikiButton'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -24,6 +25,15 @@ export default async function WikiDetailPage({ params }: Props) {
           <Link href="/wiki" className="text-blue-600 hover:underline">
             Wikiに戻る
           </Link>
+          <div className="flex gap-2">
+            <Link
+              href={`/wiki/${slug}/edit`}
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            >
+              編集
+            </Link>
+            <DeleteWikiButton pageId={page.id} pageTitle={page.title} />
+          </div>
         </div>
 
         <article className="bg-white rounded-lg shadow-sm border p-8">

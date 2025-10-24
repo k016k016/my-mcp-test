@@ -417,6 +417,33 @@ export async function middleware(request: NextRequest) {
    ```
    - **メリット**: 相対URLなので現在のドメインが維持され、E2Eテストの安定性・保守性が向上
 
+9. **Wiki権限設定（RLSポリシー）**:
+   - **編集権限**: 組織メンバー全員が全ページを編集可能
+     - 知識共有を促進するため、メンバー間での自由な編集を許可
+   - **削除権限**: 作成者 or 管理者（owner/admin）のみ
+     - 削除は影響が大きいため、慎重に制限
+   - **実装**: `supabase/migrations/20251024000007_update_wiki_permissions.sql`
+   ```sql
+   -- 編集: 全メンバーが可能
+   CREATE POLICY "All members can update wiki pages in their organization" ON wiki_pages
+       FOR UPDATE USING (
+           organization_id IN (
+               SELECT organization_id FROM organization_members
+               WHERE user_id = auth.uid() AND deleted_at IS NULL
+           )
+       );
+
+   -- 削除: 作成者 or 管理者のみ
+   CREATE POLICY "Creator or admins can delete wiki pages" ON wiki_pages
+       FOR DELETE USING (
+           created_by = auth.uid() OR
+           organization_id IN (
+               SELECT organization_id FROM organization_members
+               WHERE user_id = auth.uid() AND role IN ('owner', 'admin') AND deleted_at IS NULL
+           )
+       );
+   ```
+
 ## 主要ドキュメント
 
 - `docs/SERVICES_ACCOUNT_SETUP.md` - **ここから始める**: 7つの外部サービスすべてのセットアップ完全ガイド
@@ -424,6 +451,6 @@ export async function middleware(request: NextRequest) {
 - `docs/ENVIRONMENT_SETUP.md` - 開発/ステージング/本番環境の環境変数設定
 - `docs/MULTI_DOMAIN_SETUP.md` - マルチドメインルーティングの仕組み
 - `docs/E2E_TESTING_GUIDE.md` - E2Eテストのセットアップとパターン
-- `docs/PROJECT_PROGRESS.md` - 現在の実装状況とロードマップ
+- `docs/project/PROJECT_PROGRESS.md` - 現在の実装状況とロードマップ
 - `docs/specifications/AUTH_FLOW_SPECIFICATION.md` - 認証フロー仕様書と実装状況
 - `docs/IMPLEMENTATION_LOG.md` - 実装内容の詳細ログ（時系列）

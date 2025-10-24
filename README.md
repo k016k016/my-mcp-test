@@ -170,7 +170,7 @@ npm run dev
 - `MULTI_DOMAIN_SETUP.md` - マルチドメイン設定
 
 ### リファレンス
-- `PROJECT_PROGRESS.md` - プロジェクト進捗と完成機能一覧
+- `project/PROJECT_PROGRESS.md` - プロジェクト進捗と完成機能一覧
 - `DATABASE_SCHEMA.md` - データベース設計とテーブル定義
 
 ## 🚀 デプロイ

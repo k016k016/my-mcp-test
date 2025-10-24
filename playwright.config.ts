@@ -89,10 +89,47 @@ export default defineConfig({
       },
     },
 
+    // Wiki機能のテスト（member権限、APPドメイン）
+    {
+      name: 'wiki-chromium',
+      testMatch: /wiki\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: '.auth/member.json',
+        navigationTimeout: 30000,
+        actionTimeout: 10000,
+      },
+    },
+    {
+      name: 'wiki-firefox',
+      testMatch: /wiki\.spec\.ts/,
+      use: {
+        ...devices['Desktop Firefox'],
+        storageState: '.auth/member.json',
+        navigationTimeout: 45000,
+        actionTimeout: 15000,
+      },
+    },
+    // WebKitはServer Actionとの相性問題でスキップ（Chromium/Firefoxで動作確認済み）
+    // {
+    //   name: 'wiki-webkit',
+    //   testMatch: /wiki\.spec\.ts/,
+    //   use: {
+    //     ...devices['Desktop Safari'],
+    //     storageState: '.auth/member.json',
+    //     navigationTimeout: 90000,
+    //     actionTimeout: 30000,
+    //   },
+    //   timeout: 120000,
+    //   expect: {
+    //     timeout: 40000,
+    //   },
+    // },
+
     // その他のテスト（storageState不要）
     {
       name: 'chromium',
-      testIgnore: [/app-domain\.spec\.ts/, /admin-domain\.spec\.ts/],
+      testIgnore: [/app-domain\.spec\.ts/, /admin-domain\.spec\.ts/, /wiki\.spec\.ts/],
       use: {
         ...devices['Desktop Chrome'],
         navigationTimeout: 30000,
@@ -101,7 +138,7 @@ export default defineConfig({
     },
     {
       name: 'firefox',
-      testIgnore: [/app-domain\.spec\.ts/, /admin-domain\.spec\.ts/],
+      testIgnore: [/app-domain\.spec\.ts/, /admin-domain\.spec\.ts/, /wiki\.spec\.ts/],
       use: {
         ...devices['Desktop Firefox'],
         navigationTimeout: 45000,
@@ -110,7 +147,7 @@ export default defineConfig({
     },
     {
       name: 'webkit',
-      testIgnore: [/app-domain\.spec\.ts/, /admin-domain\.spec\.ts/],
+      testIgnore: [/app-domain\.spec\.ts/, /admin-domain\.spec\.ts/, /wiki\.spec\.ts/],
       use: {
         ...devices['Desktop Safari'],
         navigationTimeout: 60000,

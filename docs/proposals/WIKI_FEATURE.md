@@ -206,19 +206,19 @@ CREATE POLICY "Users can create wiki pages in their organization" ON wiki_pages
         )
     );
 
-CREATE POLICY "Users can update their own wiki pages or admin can update any" ON wiki_pages
+CREATE POLICY "All members can update wiki pages in their organization" ON wiki_pages
     FOR UPDATE USING (
-        created_by = auth.uid() OR
         organization_id IN (
-            SELECT organization_id FROM organization_members 
-            WHERE user_id = auth.uid() AND role IN ('owner', 'admin') AND deleted_at IS NULL
+            SELECT organization_id FROM organization_members
+            WHERE user_id = auth.uid() AND deleted_at IS NULL
         )
     );
 
-CREATE POLICY "Admins can delete any wiki page" ON wiki_pages
+CREATE POLICY "Creator or admins can delete wiki pages" ON wiki_pages
     FOR DELETE USING (
+        created_by = auth.uid() OR
         organization_id IN (
-            SELECT organization_id FROM organization_members 
+            SELECT organization_id FROM organization_members
             WHERE user_id = auth.uid() AND role IN ('owner', 'admin') AND deleted_at IS NULL
         )
     );
@@ -275,11 +275,13 @@ $$ LANGUAGE plpgsql;
 - 組織メンバー全員が閲覧可能
 
 ### 編集権限
-- `owner`/`admin`: 全ページの編集・削除可能
-- `member`: 自分が作成したページのみ編集可能
+- 組織メンバー全員が全ページの編集可能
+- 知識共有を促進するため、メンバー間での自由な編集を許可
 
-### 管理権限
-- `owner`/`admin`のみがページ削除・権限変更可能
+### 削除権限
+- `owner`/`admin`: 全ページの削除可能
+- 作成者: 自分が作成したページのみ削除可能
+- 削除は影響が大きいため、作成者または管理者のみに制限
 
 ## UI設計
 

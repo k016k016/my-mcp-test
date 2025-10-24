@@ -21,12 +21,20 @@ export default async function WikiPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Wiki</h1>
-        <Link
-          href="/wiki/create"
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-        >
-          新しいページ
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href="/wiki/search"
+            className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300"
+          >
+            検索
+          </Link>
+          <Link
+            href="/wiki/create"
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            新しいページ
+          </Link>
+        </div>
       </div>
 
       {pages.length === 0 ? (
