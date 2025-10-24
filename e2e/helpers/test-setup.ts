@@ -26,6 +26,7 @@ export function createAdminClient() {
 /**
  * テストデータをクリーンアップ
  * - テスト用メールアドレス（test-*@example.com）のユーザーを削除
+ * - 固定テストユーザー（ops@, admin@, owner@, member@）も削除
  */
 export async function cleanupTestData() {
   const supabase = createAdminClient()
@@ -33,82 +34,142 @@ export async function cleanupTestData() {
   try {
     console.log('🧹 テストデータをクリーンアップ中...')
 
-    // 1. テスト用プロフィールを取得
+    // 固定テストユーザーのメールアドレス
+    const fixedTestEmails = [
+      'ops@example.com',
+      'admin@example.com',
+      'owner@example.com',
+      'member@example.com',
+    ]
+
+    // 1. テスト用プロフィールを取得（test-* パターン + 固定ユーザー）
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
       .select('id, email')
-      .like('email', 'test-%@example.com')
+      .or(`email.like.test-%@example.com,email.in.(${fixedTestEmails.join(',')})`)
 
     if (profilesError) {
       console.error('プロフィール取得エラー:', profilesError)
-      return
+      // エラーでも続行（固定ユーザーは別途削除を試みる）
     }
 
-    if (!profiles || profiles.length === 0) {
+    const userIds = profiles?.map((p) => p.id) || []
+
+    // 2. 認証ユーザーから固定メールアドレスのユーザーも取得
+    const { data: authUsers } = await supabase.auth.admin.listUsers()
+    const fixedAuthUsers =
+      authUsers?.users.filter((u) => fixedTestEmails.includes(u.email || '')) || []
+
+    // 認証ユーザーのIDも追加（重複排除）
+    const allUserIds = [
+      ...new Set([...userIds, ...fixedAuthUsers.map((u) => u.id)]),
+    ]
+
+    if (allUserIds.length === 0) {
       console.log('✨ クリーンアップ不要（テストデータなし）')
       return
     }
 
-    const userIds = profiles.map((p) => p.id)
-    console.log(`📧 ${profiles.length}件のテストユーザーを削除します`)
+    console.log(`📧 ${allUserIds.length}件のテストユーザーを削除します`)
 
-    // 2. 関連する組織メンバーシップを削除
-    const { error: membersError } = await supabase
-      .from('organization_members')
-      .delete()
-      .in('user_id', userIds)
+    // 3. Wiki関連データを削除（外部キー制約を考慮して最初に削除）
+    try {
+      const { error: wikiError } = await supabase
+        .from('wiki_pages')
+        .delete()
+        .in('created_by', allUserIds)
 
-    if (membersError && membersError.code !== 'PGRST116') {
-      // PGRST116 = No rows found (削除対象なし)
-      console.error('メンバーシップ削除エラー:', membersError)
+      if (wikiError && wikiError.code !== 'PGRST116') {
+        console.warn('⚠️  Wiki削除警告:', wikiError.message)
+      } else if (!wikiError) {
+        console.log('📄 Wikiページを削除しました')
+      }
+    } catch (error) {
+      console.warn('⚠️  Wiki削除でエラー（スキップ）:', error)
     }
 
-    // 3. テストユーザーが所有する組織を削除
-    const { data: ownedOrgs } = await supabase
+    // 4. 組織メンバーシップに関連する組織IDを取得
+    const { data: memberOrgs } = await supabase
       .from('organization_members')
       .select('organization_id')
-      .in('user_id', userIds)
-      .eq('role', 'owner')
+      .in('user_id', allUserIds)
 
-    if (ownedOrgs && ownedOrgs.length > 0) {
-      const orgIds = ownedOrgs.map((o) => o.organization_id)
+    const orgIds = [...new Set(memberOrgs?.map((o) => o.organization_id) || [])]
 
-      // 組織メンバーを削除
-      await supabase.from('organization_members').delete().in('organization_id', orgIds)
+    if (orgIds.length > 0) {
+      console.log(`🏢 ${orgIds.length}件の組織を削除します`)
 
-      // 組織を削除
-      const { error: orgsError } = await supabase
-        .from('organizations')
+      // 4-1. Wiki pages（組織に紐づくもの）を削除
+      try {
+        await supabase.from('wiki_pages').delete().in('organization_id', orgIds)
+      } catch (error) {
+        console.warn('⚠️  組織関連Wiki削除でエラー（スキップ）')
+      }
+
+      // 4-2. 組織の全メンバーシップを削除
+      try {
+        await supabase
+          .from('organization_members')
+          .delete()
+          .in('organization_id', orgIds)
+        console.log('👥 組織メンバーシップを削除しました')
+      } catch (error) {
+        console.warn('⚠️  メンバーシップ削除でエラー（スキップ）')
+      }
+
+      // 4-3. 組織を削除
+      try {
+        const { error: orgsError } = await supabase
+          .from('organizations')
+          .delete()
+          .in('id', orgIds)
+
+        if (orgsError && orgsError.code !== 'PGRST116') {
+          console.warn('⚠️  組織削除警告:', orgsError.message)
+        } else if (!orgsError) {
+          console.log('🏢 組織を削除しました')
+        }
+      } catch (error) {
+        console.warn('⚠️  組織削除でエラー（スキップ）')
+      }
+    }
+
+    // 5. プロフィールを削除
+    try {
+      const { error: deleteProfilesError } = await supabase
+        .from('profiles')
         .delete()
-        .in('id', orgIds)
+        .in('id', allUserIds)
 
-      if (orgsError) {
-        console.error('組織削除エラー:', orgsError)
+      if (deleteProfilesError && deleteProfilesError.code !== 'PGRST116') {
+        console.warn('⚠️  プロフィール削除警告:', deleteProfilesError.message)
+      } else if (!deleteProfilesError) {
+        console.log('👤 プロフィールを削除しました')
+      }
+    } catch (error) {
+      console.warn('⚠️  プロフィール削除でエラー（スキップ）')
+    }
+
+    // 6. 認証ユーザーを削除（Admin API使用）
+    let deletedCount = 0
+    for (const userId of allUserIds) {
+      try {
+        const { error } = await supabase.auth.admin.deleteUser(userId)
+        if (error) {
+          console.warn(`⚠️  ユーザー ${userId} 削除警告: ${error.message}`)
+        } else {
+          deletedCount++
+        }
+      } catch (error) {
+        console.warn(`⚠️  ユーザー ${userId} 削除でエラー（スキップ）`)
       }
     }
 
-    // 4. プロフィールを削除
-    const { error: deleteProfilesError } = await supabase
-      .from('profiles')
-      .delete()
-      .in('id', userIds)
-
-    if (deleteProfilesError) {
-      console.error('プロフィール削除エラー:', deleteProfilesError)
-    }
-
-    // 5. 認証ユーザーを削除（Admin API使用）
-    for (const userId of userIds) {
-      const { error } = await supabase.auth.admin.deleteUser(userId)
-      if (error) {
-        console.error(`ユーザー ${userId} 削除エラー:`, error)
-      }
-    }
-
-    console.log('✅ テストデータのクリーンアップ完了')
+    console.log(`✅ テストデータのクリーンアップ完了（${deletedCount}/${allUserIds.length}件）`)
   } catch (error) {
     console.error('❌ クリーンアップ中にエラー発生:', error)
-    throw error
+    // エラーが起きても処理を続行（テストセットアップを試みる）
+    console.log('⚠️  一部のクリーンアップに失敗しましたが、続行します')
   }
 }
 
@@ -133,7 +194,14 @@ export async function createTestUser(
 
     if (existingUser) {
       console.log(`🔄 既存ユーザーを削除: ${email}`)
-      await supabase.auth.admin.deleteUser(existingUser.id)
+      const { error: deleteError } = await supabase.auth.admin.deleteUser(
+        existingUser.id
+      )
+      if (deleteError) {
+        console.warn(`⚠️  ユーザー削除警告: ${deleteError.message}`)
+      }
+      // 削除完了を待つ（Supabaseが削除を完全に処理するまで）
+      await new Promise((resolve) => setTimeout(resolve, 1000))
     }
 
     // ユーザーを作成（メール確認なし）

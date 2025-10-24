@@ -1,0 +1,223 @@
+# 実装ログ
+
+このファイルは、プロジェクトの実装内容を時系列で記録します。
+
+---
+
+## 2025-01-24: Wiki機能E2Eテスト修正とマルチドメイン環境でのServer Action最適化
+
+### 📌 実装の背景
+
+Wiki機能のE2Eテストで以下の問題が発生：
+- **問題1**: ページ作成後の遷移が失敗（`/wiki/create`から詳細ページへ遷移できず10秒タイムアウト）
+- **問題2**: テストデータクリーンアップで固定テストユーザー（`member@example.com`等）が削除されず、DB制約エラーが発生
+
+**根本原因の調査結果**:
+1. Server Actionの`redirect()`で絶対URL（`http://app.local.test:3000/wiki/${slug}`）を指定したが、Next.jsの内部最適化により`localhost:3000`に丸められる
+2. middlewareがServer Action/RSCリクエストを処理してしまい、リライトや認証チェックが干渉
+3. テストセットアップで固定ユーザーの削除処理が不足
+
+### 🎯 実装内容
+
+#### 1. テストデータクリーンアップの改善
+
+**ファイル**: `e2e/helpers/test-setup.ts`
+
+```typescript
+export async function cleanupTestData(supabase: SupabaseClient) {
+  // 固定テストユーザーも削除対象に追加
+  const fixedTestEmails = [
+    'ops@example.com',
+    'admin@example.com',
+    'owner@example.com',
+    'member@example.com',
+  ]
+
+  // Wiki関連テーブルのクリーンアップを追加
+  const { error: wikiError } = await supabase
+    .from('wiki_pages')
+    .delete()
+    .in('created_by', allUserIds)
+
+  // 削除順序を最適化（外部キー制約を考慮）
+  // 1. Wiki pages → 2. Memberships → 3. Organizations → 4. Profiles → 5. Auth users
+}
+```
+
+**動作**:
+- 固定テストユーザー（ops, admin, owner, member）も削除対象に含める
+- Wiki関連テーブル（wiki_pages）のクリーンアップを追加
+- 外部キー制約を考慮した削除順序で、エラーハンドリングを改善
+
+#### 2. MiddlewareにServer Action素通し処理を追加
+
+**ファイル**: `src/middleware.ts`
+
+```typescript
+export async function middleware(request: NextRequest) {
+  // 1) Server Action / RSC リクエストは無条件で素通し
+  const nextAction = request.headers.get('next-action')
+  const rscHeader = request.headers.get('rsc')
+  const ct = request.headers.get('content-type') || ''
+  const isRSC =
+    ct.includes('multipart/form-data') ||
+    ct.includes('text/x-component') ||
+    !!nextAction ||
+    !!rscHeader
+
+  if (isRSC) {
+    console.log('[Middleware] Server Action/RSC detected, passing through:', request.nextUrl.pathname)
+    return NextResponse.next()
+  }
+
+  // ... 以降の処理（ドメイン判定、認証チェック等）
+}
+```
+
+**動作**:
+- Server Action/RSCリクエストをミドルウェアの**最優先**で検出
+- 検出されたリクエストは無条件で素通し（リライトや認証チェックをスキップ）
+- これにより、Server Actionが正常に実行されるようになる
+
+#### 3. Server Actionを相対URL遷移パターンに変更
+
+**ファイル**: `src/app/actions/wiki.ts`
+
+```typescript
+export async function createWikiPage(data: CreateWikiPageData) {
+  try {
+    // ... ページ作成処理
+
+    revalidatePath('/wiki')
+    revalidatePath(`/wiki/${data.slug}`)
+
+    // 成功を返す（クライアント側で遷移）
+    return { success: true, slug: data.slug, page }
+  } catch (error) {
+    return { error: '...' }
+  }
+}
+```
+
+**ファイル**: `src/app/app/wiki/create/page.tsx`
+
+```typescript
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault()
+  setIsSubmitting(true)
+
+  try {
+    const result = await createWikiPage({ title, slug, content })
+
+    if ('error' in result) {
+      setError(result.error)
+      setIsSubmitting(false)
+      return
+    }
+
+    // 成功したらページ詳細に遷移（相対URLで現在のドメインを維持）
+    if (result.success && result.slug) {
+      router.refresh()
+      router.push(`/wiki/${result.slug}`) // 相対URL
+    }
+  } catch (err) {
+    setError('...')
+    setIsSubmitting(false)
+  }
+}
+```
+
+**動作**:
+- Server Actionは`redirect()`を使わず、`{ success: true, slug }` を返す
+- クライアント側で`router.push('/wiki/${slug}')`で相対パス遷移
+- 相対URLなので現在のドメイン（`app.local.test`）が維持される
+- 絶対URLの丸められ問題を回避
+
+#### 4. CLAUDE.mdに学びを記録
+
+**ファイル**: `CLAUDE.md`
+
+以下の2つの重要な知見を追加：
+1. **ミドルウェアの動作**: Server Action/RSC素通し処理の重要性と実装パターン
+2. **よくあるハマりどころ**: マルチドメイン環境でのServer Action遷移パターン（避けるべきパターンと推奨パターン）
+
+### 📁 変更ファイル一覧
+
+| ファイル | 変更内容 | タイプ |
+|---------|---------|--------|
+| `e2e/helpers/test-setup.ts` | 固定テストユーザー削除、Wiki関連テーブルクリーンアップ、削除順序最適化 | 変更 |
+| `src/middleware.ts` | Server Action/RSC素通し処理を最優先で追加（9-23行目） | 変更 |
+| `src/app/actions/wiki.ts` | `redirect()`を削除し、値を返すように変更（1-5, 71-72行目） | 変更 |
+| `src/app/app/wiki/create/page.tsx` | `result.slug`を使って相対パスで遷移（34-39行目） | 変更 |
+| `CLAUDE.md` | ミドルウェアパターンとServer Action遷移パターンの知見を追加（339-394行目） | 変更 |
+
+### ✅ テスト結果
+- [x] Wiki E2Eテスト: **9 passed, 0 failed, 7 skipped** ✅
+- [x] ページ作成後の遷移が正常に動作
+- [x] テストデータクリーンアップが正常に動作
+- [x] 固定テストユーザーも正しく削除される
+
+### 🔗 関連リンク
+- [CLAUDE.md - ミドルウェアの動作](../CLAUDE.md#ミドルウェアの動作)
+- [CLAUDE.md - よくあるハマりどころ #8](../CLAUDE.md#よくあるハマりどころ)
+
+### 📝 学んだこと
+
+**マルチドメイン環境でのServer Action設計パターン**:
+- ❌ **避けるべき**: Server Actionで`redirect()`に絶対URLを指定
+  - Next.jsの最適化により`localhost`に丸められる可能性
+  - dev環境・プロキシ・Hostヘッダの揺れで不安定
+- ✅ **推奨**: Server Actionで値を返し、クライアント側で相対URL遷移
+  - 現在のドメインが維持される
+  - E2Eテストの安定性・保守性が向上
+  - マルチドメイン対応に強い
+
+**Middlewareでの注意点**:
+- Server Action/RSCリクエストは**最優先で素通し**させること
+- リライトや認証チェックで処理すると、フォーム送信が失敗する
+
+---
+
+## テンプレート（次回の実装記録用）
+
+以下のテンプレートを使用して、新しい実装内容を記録してください。
+**必ずこのテンプレートの直前に新しいエントリを挿入すること。**
+
+```markdown
+## YYYY-MM-DD: [実装内容のタイトル]
+
+### 📌 実装の背景
+[なぜこの実装が必要だったか]
+
+### 🎯 実装内容
+
+#### 1. [サブセクション名]
+
+**ファイル**: `path/to/file.ts`
+
+```typescript
+// コード例
+```
+
+**動作**:
+- 説明1
+- 説明2
+
+### 📁 変更ファイル一覧
+
+| ファイル | 変更内容 | タイプ |
+|---------|---------|--------|
+| `path/to/file1.ts` | 説明 | 変更/新規 |
+
+### ✅ テスト項目
+- [ ] テスト項目1
+- [ ] テスト項目2
+
+### 🔗 関連リンク
+- 関連ドキュメント
+
+### 📝 学んだこと
+- 重要な知見やパターン
+
+---
+```

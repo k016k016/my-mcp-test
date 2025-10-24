@@ -2,7 +2,31 @@
 
 このファイルは、Claude Code (claude.ai/code) がこのリポジトリで作業する際のガイダンスを提供します。
 日本語でお願いします。
-開発サーバのportは3000でお願いします。
+
+## 重要なルール
+
+### 開発サーバーのポート
+
+**開発サーバーは必ずポート3000で起動すること**
+
+- E2Eテスト（Playwright）はポート3000を前提に設定されています
+- `local.test`ドメインの設定もポート3000を前提としています
+- ポート3000以外で起動すると、E2Eテストが404エラーで失敗します
+
+**ポート3000が使用中の場合のトラブルシューティング**:
+
+```bash
+# Windowsの場合：ポート3000を使用しているプロセスを確認
+netstat -ano | findstr :3000
+
+# プロセスIDが表示されたら、そのプロセスをkill
+taskkill /PID <プロセスID> /F
+
+# macOS/Linuxの場合：ポート3000を使用しているプロセスを確認してkill
+lsof -ti:3000 | xargs kill -9
+```
+
+開発サーバーを起動する前に、必ずポート3000が空いていることを確認してください。
 
 ## 概要
 
@@ -315,12 +339,36 @@ supabase db push
 ### ミドルウェアの動作
 
 `src/middleware.ts`はすべてのリクエストで実行され、以下を行います：
-1. ホスト名からドメインタイプを判定
-2. OPSドメインのIP制限を適用（`OPS_ALLOWED_IPS`が設定されている場合）
-3. Supabaseセッションを更新
-4. 適切なルートグループにURLをリライト
+1. **Server Action/RSCリクエストの素通し**（最優先）
+2. ホスト名からドメインタイプを判定
+3. OPSドメインのIP制限を適用（`OPS_ALLOWED_IPS`が設定されている場合）
+4. Supabaseセッションを更新
+5. 適切なルートグループにURLをリライト
 
-**注意**: ミドルウェアは静的アセットを除くすべてのリクエストで実行されます（`config.matcher`で設定）。
+**重要**: Server Action/RSCリクエストは、ミドルウェアの最初で無条件に素通しさせる必要があります：
+```typescript
+export async function middleware(request: NextRequest) {
+  // 1) Server Action / RSC リクエストは無条件で素通し
+  const nextAction = request.headers.get('next-action')
+  const rscHeader = request.headers.get('rsc')
+  const ct = request.headers.get('content-type') || ''
+  const isRSC =
+    ct.includes('multipart/form-data') ||
+    ct.includes('text/x-component') ||
+    !!nextAction ||
+    !!rscHeader
+
+  if (isRSC) {
+    return NextResponse.next()
+  }
+
+  // ... 以降の処理（ドメイン判定、認証チェック等）
+}
+```
+
+**注意**:
+- ミドルウェアは静的アセットを除くすべてのリクエストで実行されます（`config.matcher`で設定）
+- Server Action/RSCリクエストをリライトや認証チェックで処理すると、フォーム送信が失敗する原因になります
 
 ## よくあるハマりどころ
 
@@ -343,6 +391,31 @@ supabase db push
    - サービスロールキーはサーバーサイドでのみ使用すべき
 
 7. **ドメインのテスト**: ローカルでテストする際は、`*.localhost:3000`サブドメインを使用してください。ほとんどのブラウザはhostsファイルの変更なしにこれを正しく処理します。
+
+8. **Server Actionでのページ遷移（マルチドメイン環境）**:
+   - **問題**: Server Actionで`redirect()`に絶対URL（例: `http://app.local.test:3000/path`）を指定しても、`localhost:3000`に丸められることがある
+   - **原因**: Next.jsの`redirect()`は同一オリジン前提の最適化が入り、dev環境・プロキシ・Hostヘッダの揺れで絶対URLが変換される
+   - **解決策**: Server Actionでは`redirect()`を使わず、値を返してクライアント側で`router.push()`を使用
+   ```typescript
+   // ❌ 避けるパターン
+   export async function createItem() {
+     // ...
+     redirect('http://app.local.test:3000/items/123') // localhostに丸められる可能性
+   }
+
+   // ✅ 推奨パターン
+   export async function createItem() {
+     // ...
+     return { success: true, itemId: '123' }
+   }
+
+   // クライアント側
+   const result = await createItem()
+   if (result.success) {
+     router.push(`/items/${result.itemId}`) // 相対URLで現在のドメイン維持
+   }
+   ```
+   - **メリット**: 相対URLなので現在のドメインが維持され、E2Eテストの安定性・保守性が向上
 
 ## 主要ドキュメント
 

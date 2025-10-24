@@ -7,9 +7,24 @@ import { isOpsUser, hasAdminAccess, hasOrganizationAccess } from '@/lib/auth/per
 import { env } from '@/lib/env'
 
 export async function middleware(request: NextRequest) {
+  // 1) Server Action / RSC リクエストは無条件で素通し
+  const nextAction = request.headers.get('next-action')
+  const rscHeader = request.headers.get('rsc')
+  const ct = request.headers.get('content-type') || ''
+  const isRSC =
+    ct.includes('multipart/form-data') ||
+    ct.includes('text/x-component') ||
+    !!nextAction ||
+    !!rscHeader
+
+  if (isRSC) {
+    console.log('[Middleware] Server Action/RSC detected, passing through:', request.nextUrl.pathname)
+    return NextResponse.next()
+  }
+
   const host = request.headers.get('host') || ''
   const domain = getDomainFromHost(host)
-  
+
   console.log('[Middleware] Request to:', host, 'Domain type:', domain, 'Path:', request.nextUrl.pathname)
 
   // 未知のサブドメインの場合は404エラーを返す
