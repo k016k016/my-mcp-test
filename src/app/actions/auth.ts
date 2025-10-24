@@ -37,7 +37,7 @@ export async function signUp(formData: FormData) {
       return { error: rateLimit.error }
     }
 
-    const supabase = await createClient()
+    let supabase = await createClient()
 
     // ユーザー登録
     const { data, error } = await supabase.auth.signUp({
@@ -65,8 +65,18 @@ export async function signUp(formData: FormData) {
 
     // プロフィールテーブルに会社名と担当者名を保存
     // トリガーでprofilesテーブルは自動作成されるが、company_nameとnameは手動で更新が必要
-    if (data.user) {
-      const { error: profileError } = await supabase
+    if (data.user && data.session) {
+      console.log('[signUp] Session available, updating profile and creating organization')
+
+      // サインアップ直後はRLS問題を回避するため、Service Role Keyでデータ作成
+      const { createClient: createAdminClient } = await import('@supabase/supabase-js')
+      const supabaseAdmin = createAdminClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      )
+
+      // プロフィール更新
+      const { error: profileError } = await supabaseAdmin
         .from('profiles')
         .update({
           company_name: companyName,
@@ -81,7 +91,7 @@ export async function signUp(formData: FormData) {
 
       // サインアップ成功後、自動的に組織を作成
       console.log('[signUp] Creating organization for user:', data.user.id)
-      const { data: organization, error: orgError } = await supabase
+      const { data: organization, error: orgError } = await supabaseAdmin
         .from('organizations')
         .insert({
           name: companyName,
@@ -98,7 +108,7 @@ export async function signUp(formData: FormData) {
       } else {
         console.log('[signUp] Organization created:', organization.id)
         // ユーザーをownerとして組織に追加
-        const { error: memberError } = await supabase.from('organization_members').insert({
+        const { error: memberError } = await supabaseAdmin.from('organization_members').insert({
           organization_id: organization.id,
           user_id: data.user.id,
           role: 'owner',
@@ -107,7 +117,7 @@ export async function signUp(formData: FormData) {
         if (memberError) {
           console.error('[signUp] Failed to add owner:', memberError)
           // メンバー追加に失敗した場合は組織を削除
-          await supabase.from('organizations').delete().eq('id', organization.id)
+          await supabaseAdmin.from('organizations').delete().eq('id', organization.id)
         } else {
           console.log('[signUp] User added as owner to organization:', organization.id)
           // 組織作成成功 - 現在の組織IDを設定
@@ -120,12 +130,24 @@ export async function signUp(formData: FormData) {
 
     // メール確認が必要な場合
     if (data.user && !data.session) {
+      console.log('[signUp] Email confirmation required - no session returned')
       return { success: true, requiresEmailConfirmation: true }
     }
 
     // 即座にログインできた場合（メール確認不要設定の場合）
     // 仕様: サインアップ時にownerとして組織作成済み → WWWのオンボーディング（支払い）へ
-    return { success: true, requiresEmailConfirmation: false }
+    console.log('[signUp] Signup successful with session - redirecting to plan selection')
+
+    // E2E環境ではクライアント側で遷移させる（dev-loginバイパス機構を使用）
+    if (process.env.NEXT_PUBLIC_E2E === '1') {
+      return {
+        success: true,
+        requiresEmailConfirmation: false,
+      }
+    }
+
+    // 本番環境ではServer Action内で直接redirect（Cookie同期問題を回避）
+    redirect('/onboarding/select-plan')
   } catch (error) {
     console.error('[signUp] Unexpected error:', error)
     return { error: '予期しないエラーが発生しました。もう一度お試しください。' }

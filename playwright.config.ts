@@ -163,5 +163,9 @@ export default defineConfig({
         command: 'npm run dev',
         url: 'http://localhost:3000',
         reuseExistingServer: !process.env.CI,
+        env: {
+          NEXT_PUBLIC_E2E: '1',
+          TEST_HELPER_SECRET: process.env.TEST_HELPER_SECRET || 'test-secret-key',
+        },
       },
 })

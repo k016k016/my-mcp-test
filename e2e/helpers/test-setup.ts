@@ -34,19 +34,14 @@ export async function cleanupTestData() {
   try {
     console.log('🧹 テストデータをクリーンアップ中...')
 
-    // 固定テストユーザーのメールアドレス
-    const fixedTestEmails = [
-      'ops@example.com',
-      'admin@example.com',
-      'owner@example.com',
-      'member@example.com',
-    ]
+    // 固定テストユーザーのメールアドレス（削除対象から除外）
+    const fixedTestEmails: string[] = []
 
-    // 1. テスト用プロフィールを取得（test-* パターン + 固定ユーザー）
+    // 1. テスト用プロフィールを取得（test-* パターンのみ）
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
       .select('id, email')
-      .or(`email.like.test-%@example.com,email.in.(${fixedTestEmails.join(',')})`)
+      .like('email', 'test-%@example.com')
 
     if (profilesError) {
       console.error('プロフィール取得エラー:', profilesError)
@@ -55,15 +50,8 @@ export async function cleanupTestData() {
 
     const userIds = profiles?.map((p) => p.id) || []
 
-    // 2. 認証ユーザーから固定メールアドレスのユーザーも取得
-    const { data: authUsers } = await supabase.auth.admin.listUsers()
-    const fixedAuthUsers =
-      authUsers?.users.filter((u) => fixedTestEmails.includes(u.email || '')) || []
-
-    // 認証ユーザーのIDも追加（重複排除）
-    const allUserIds = [
-      ...new Set([...userIds, ...fixedAuthUsers.map((u) => u.id)]),
-    ]
+    // 2. 固定ユーザーは削除対象から除外（空配列なので何もしない）
+    const allUserIds = [...new Set(userIds)]
 
     if (allUserIds.length === 0) {
       console.log('✨ クリーンアップ不要（テストデータなし）')

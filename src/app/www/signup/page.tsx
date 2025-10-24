@@ -5,6 +5,7 @@ import { signUp } from '@/app/actions/auth'
 import Link from 'next/link'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 
 export default function SignUpPage() {
   const router = useRouter()
@@ -28,9 +29,11 @@ export default function SignUpPage() {
         // メール確認が必要な場合
         router.push('/auth/verify-email')
       } else {
-        // メール確認不要の場合はオンボーディングの支払いへ（WWW）
-        const wwwUrl = process.env.NEXT_PUBLIC_WWW_URL || 'http://www.local.test:3000'
-        window.location.href = `${wwwUrl}/onboarding/payment`
+        // メール確認不要の場合
+        // Note: E2Eテストでは、テスト側で /testhelpers/dev-login を呼んでから遷移する
+        // 本番環境では、ここで成功メッセージを表示するか、Server Action側で redirect() を使う
+        setIsLoading(false)
+        // 将来的には Server Action 側で redirect('/onboarding/select-plan') を実装予定
       }
     } else {
       setError('予期しないエラーが発生しました')

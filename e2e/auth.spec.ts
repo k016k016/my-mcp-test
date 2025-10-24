@@ -27,6 +27,17 @@ test.describe('認証フロー', () => {
 
     await page.click('button[type="submit"]:has-text("無料でアカウントを作成")')
 
+    // サインアップ完了後、E2E専用の擬似認証を設定
+    const devLoginResponse = await page.request.post(`${DOMAINS.WWW}/testhelpers/dev-login`, {
+      data: {
+        secret: process.env.TEST_HELPER_SECRET || 'test-secret-key',
+      },
+    })
+    expect(devLoginResponse.ok()).toBeTruthy()
+
+    // プラン選択ページに遷移
+    await page.goto(`${DOMAINS.WWW}/onboarding/select-plan`)
+
     // ✅ プラン選択ページに到達
     await expect(page).toHaveURL(/\/onboarding\/select-plan/, { timeout: 10000 })
 

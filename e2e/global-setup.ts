@@ -26,90 +26,78 @@ async function globalSetup(config: FullConfig) {
     // 共通パスワード（テスト用）
     const TEST_PASSWORD = 'test1234'
 
-    // OPS権限ユーザー
-    const opsUser = await createTestUser('ops@example.com', TEST_PASSWORD, {
-      companyName: 'OPS Company',
-      contactName: 'OPS User',
-    })
-    // OPS権限をプロフィールに設定
-    await supabase.from('profiles').update({ is_ops: true }).eq('id', opsUser.id)
-
-    // 管理者ユーザー
-    const adminUser = await createTestUser('admin@example.com', TEST_PASSWORD, {
-      companyName: 'Admin Company',
-      contactName: 'Admin User',
-    })
-    const adminOrg = await createTestOrganization(adminUser.id, 'Admin Organization', 'admin-org')
-
-    // 管理者権限を設定
-    await supabase
-      .from('organization_members')
-      .update({ role: 'admin' })
-      .eq('user_id', adminUser.id)
-      .eq('organization_id', adminOrg.id)
-
-    // オーナーユーザー
+    // === Test Organization（owner@, admin@, member@が同じ組織に所属） ===
     const ownerUser = await createTestUser('owner@example.com', TEST_PASSWORD, {
-      companyName: 'Owner Company',
+      companyName: 'Test Organization',
       contactName: 'Owner User',
     })
-    await createTestOrganization(ownerUser.id, 'Owner Organization', 'owner-org')
+    const testOrg = await createTestOrganization(ownerUser.id, 'Test Organization', 'test-org')
 
-    // 一般メンバーユーザー（複数組織に所属）
+    // admin@を作成してTest Organizationにadminとして追加
+    const adminUser = await createTestUser('admin@example.com', TEST_PASSWORD, {
+      companyName: 'Test Organization',
+      contactName: 'Admin User',
+    })
+    await supabase
+      .from('organization_members')
+      .insert({
+        organization_id: testOrg.id,
+        user_id: adminUser.id,
+        role: 'admin',
+      })
+
+    // member@を作成してTest Organizationにmemberとして追加
     const memberUser = await createTestUser('member@example.com', TEST_PASSWORD, {
-      companyName: 'Member Company',
+      companyName: 'Test Organization',
       contactName: 'Member User',
     })
-    const memberOrg = await createTestOrganization(memberUser.id, 'Member Organization', 'member-org')
-
-    // メンバー権限を設定（ownerからmemberに変更）
     await supabase
       .from('organization_members')
-      .update({ role: 'member' })
-      .eq('user_id', memberUser.id)
-      .eq('organization_id', memberOrg.id)
+      .insert({
+        organization_id: testOrg.id,
+        user_id: memberUser.id,
+        role: 'member',
+      })
 
-    // memberユーザー用の2つ目の組織（組織切り替えテスト用）
-    const memberOrg2 = await createTestOrganization(memberUser.id, 'Member Organization 2', 'member-org-2')
-    // この組織でもmember権限に設定
-    await supabase
-      .from('organization_members')
-      .update({ role: 'member' })
-      .eq('user_id', memberUser.id)
-      .eq('organization_id', memberOrg2.id)
+    // === Individual Organizations（各自が独立した組織のowner） ===
 
-    // 組織未所属ユーザー
-    await createTestUser('noorg@example.com', TEST_PASSWORD, {
-      companyName: 'No Org Company',
-      contactName: 'No Org User',
+    // ops@（OPS権限 + Owner1 Organization）
+    const opsUser = await createTestUser('ops@example.com', TEST_PASSWORD, {
+      companyName: 'OPS Organization',
+      contactName: 'OPS User',
     })
+    await createTestOrganization(opsUser.id, 'OPS Organization', 'ops-org')
+    await supabase.from('profiles').update({ is_ops: true }).eq('id', opsUser.id)
 
-    // 複数組織所属ユーザー（multiorg）
-    const multiOrgUser = await createTestUser('multiorg@example.com', TEST_PASSWORD, {
-      companyName: 'Multi Org Company',
-      contactName: 'Multi Org User',
+    // owner1@（Owner1 Organization）
+    const owner1User = await createTestUser('owner1@example.com', TEST_PASSWORD, {
+      companyName: 'Owner1 Organization',
+      contactName: 'Owner1 User',
     })
+    const owner1Org = await createTestOrganization(owner1User.id, 'Owner1 Organization', 'owner1-org')
 
-    // 組織1: MultiOrg Owner Organization（owner権限） - 名前を一意に
-    const ownerOrganization = await createTestOrganization(
-      multiOrgUser.id,
-      'MultiOrg Owner Organization',
-      'multiorg-owner-org'
-    )
-    // デフォルトでownerになるので、権限変更は不要
+    // owner2@（Owner2 Organization）
+    const owner2User = await createTestUser('owner2@example.com', TEST_PASSWORD, {
+      companyName: 'Owner2 Organization',
+      contactName: 'Owner2 User',
+    })
+    await createTestOrganization(owner2User.id, 'Owner2 Organization', 'owner2-org')
 
-    // 組織2: MultiOrg Admin Organization（admin権限） - 名前を一意に
-    const adminOrganization = await createTestOrganization(
-      multiOrgUser.id,
-      'MultiOrg Admin Organization',
-      'multiorg-admin-org'
-    )
-    // admin権限に変更
+    // owner3@（Owner3 Organization）
+    const owner3User = await createTestUser('owner3@example.com', TEST_PASSWORD, {
+      companyName: 'Owner3 Organization',
+      contactName: 'Owner3 User',
+    })
+    await createTestOrganization(owner3User.id, 'Owner3 Organization', 'owner3-org')
+
+    // === 組織切り替えテスト用: member@がOwner1 Organizationにもmemberとして参加 ===
     await supabase
       .from('organization_members')
-      .update({ role: 'admin' })
-      .eq('user_id', multiOrgUser.id)
-      .eq('organization_id', adminOrganization.id)
+      .insert({
+        organization_id: owner1Org.id,
+        user_id: memberUser.id,
+        role: 'member',
+      })
 
     // 3. storageStateを生成（ログイン状態を保存）
     console.log('🔐 storageStateを生成中...')

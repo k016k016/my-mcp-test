@@ -390,8 +390,12 @@ export async function completePayment(planId: LicensePlanType) {
       return { error: '認証が必要です' }
     }
 
+    // RLS問題を回避するため、Admin APIを使用して組織を取得
+    const { getAdminClient } = await import('@/lib/supabase/admin')
+    const supabaseAdmin = getAdminClient()
+
     // 現在の組織を取得
-    const { data: memberships, error: memberError } = await supabase
+    const { data: memberships, error: memberError } = await supabaseAdmin
       .from('organization_members')
       .select('organization_id')
       .eq('user_id', user.id)
@@ -418,9 +422,9 @@ export async function completePayment(planId: LicensePlanType) {
       return { error: 'ライセンスの作成に失敗しました' }
     }
 
-    // 監査ログを記録
+    // 監査ログを記録（Admin APIを使用）
     const { ipAddress, userAgent } = await getRequestInfo()
-    await supabase.from('audit_logs').insert({
+    await supabaseAdmin.from('audit_logs').insert({
       organization_id: orgId,
       user_id: user.id,
       action: 'license.created',

@@ -22,6 +22,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // 2) /testhelpers/* パスはE2Eテスト用のため素通し
+  if (request.nextUrl.pathname.startsWith('/testhelpers/')) {
+    console.log('[Middleware] Test helper path detected, passing through:', request.nextUrl.pathname)
+    return NextResponse.next()
+  }
+
   const host = request.headers.get('host') || ''
   const domain = getDomainFromHost(host)
 
