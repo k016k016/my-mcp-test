@@ -99,6 +99,52 @@ async function globalSetup(config: FullConfig) {
         role: 'member',
       })
 
+    // === 複数組織ユーザー: multiorg@が2つの異なる組織に所属 ===
+    const multiOrgUser = await createTestUser('multiorg@example.com', TEST_PASSWORD, {
+      companyName: 'MultiOrg Owner Organization',
+      contactName: 'MultiOrg User',
+    })
+    const multiOrg1 = await createTestOrganization(multiOrgUser.id, 'MultiOrg Owner Organization', 'multiorg-owner')
+
+    // 2つ目の組織を作成（admin権限用）
+    // 既存の組織があれば削除
+    const { data: existingMultiOrg2 } = await supabase
+      .from('organizations')
+      .select('id')
+      .eq('name', 'MultiOrg Admin Organization')
+
+    if (existingMultiOrg2 && existingMultiOrg2.length > 0) {
+      for (const org of existingMultiOrg2) {
+        console.log(`🔄 既存組織を削除: MultiOrg Admin Organization`)
+        await supabase.from('organization_members').delete().eq('organization_id', org.id)
+        await supabase.from('organizations').delete().eq('id', org.id)
+      }
+    }
+
+    // 組織を作成
+    const { data: multiOrg2Data, error: multiOrg2Error } = await supabase
+      .from('organizations')
+      .insert({
+        name: 'MultiOrg Admin Organization',
+        subscription_plan: 'free',
+        subscription_status: 'active',
+      })
+      .select()
+      .single()
+
+    if (multiOrg2Error) throw multiOrg2Error
+
+    console.log('✅ テスト組織作成: MultiOrg Admin Organization (multiorg-admin)')
+
+    // multiorg@をadmin権限で追加
+    await supabase
+      .from('organization_members')
+      .insert({
+        organization_id: multiOrg2Data.id,
+        user_id: multiOrgUser.id,
+        role: 'admin',
+      })
+
     // 3. storageStateを生成（ログイン状態を保存）
     console.log('🔐 storageStateを生成中...')
 

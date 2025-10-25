@@ -195,13 +195,16 @@ test.describe('組織切り替え - AUTH_FLOW_SPECIFICATION準拠', () => {
       const firstOrgName = (await currentName.textContent())?.trim() ?? ''
 
       await page.getByTestId('organization-switcher').click()
+
       const otherBtn = page
         .locator('[data-testid^="org-option-"]:not([data-testid="org-option-active"])')
         .first()
 
       // 組織切り替えクリック後、組織名が変わることを確認
       // ドメインはADMIN→ADMINで変わらないが、組織IDは変わる
-      await otherBtn.click()
+      await clickAndWaitRedirect(page, () => otherBtn.click(), 'admin')
+
+      // 組織名が変わったことを確認
       await expect(currentName).not.toHaveText(firstOrgName, { timeout: 10000 })
     })
 

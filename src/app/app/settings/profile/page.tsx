@@ -26,6 +26,26 @@ export default function ProfilePage() {
     loadOrganizations()
   }, [])
 
+  // 成功メッセージの自動非表示（3秒後）
+  useEffect(() => {
+    if (message?.type === 'success') {
+      const timer = setTimeout(() => {
+        setMessage(null)
+      }, 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [message])
+
+  // パスワード変更成功メッセージの自動非表示（3秒後）
+  useEffect(() => {
+    if (passwordMessage?.type === 'success') {
+      const timer = setTimeout(() => {
+        setPasswordMessage(null)
+      }, 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [passwordMessage])
+
   async function loadProfile() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
